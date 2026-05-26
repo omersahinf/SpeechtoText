@@ -1,0 +1,75 @@
+{
+  "name": "sesli-dikte",
+  "version": "0.1.0",
+  "description": "Turkce sesli dikte uygulamasi MVP",
+  "main": "out/main/index.js",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "tsc --noEmit && electron-vite build",
+    "preview": "electron-vite preview",
+    "lint": "eslint . --ext .ts,.tsx",
+    "test": "vitest run",
+    "package": "electron-builder",
+    "package:mac": "electron-builder --mac",
+    "package:win": "electron-builder --win",
+    "postinstall": "electron-builder install-app-deps && electron-rebuild -f -w uiohook-napi",
+    "prepare": "husky",
+    "test:coverage": "vitest run --coverage",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "electron",
+    "dictation",
+    "turkish",
+    "speech-to-text"
+  ],
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@electron-toolkit/utils": "^4.0.0",
+    "@nut-tree-fork/nut-js": "^4.2.6",
+    "dotenv": "^17.4.2",
+    "electron-log": "^5.4.3",
+    "electron-store": "^11.0.2",
+    "groq-sdk": "^1.1.2",
+    "openai": "^6.35.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "uiohook-napi": "^1.5.5",
+    "zod": "^4.4.1"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
+    "@testing-library/react": "^16.3.1",
+    "@types/node": "^24.10.2",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/eslint-plugin": "^8.50.0",
+    "@typescript-eslint/parser": "^8.50.0",
+    "@vitejs/plugin-react": "^5.1.2",
+    "autoprefixer": "^10.4.23",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
+    "electron-vite": "^5.0.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.5",
+    "postcss": "^8.5.6",
+    "prettier": "^3.8.2",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.2",
+    "vitest": "^3.2.4"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write",
+      "eslint --fix --max-warnings 0"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  }
+}

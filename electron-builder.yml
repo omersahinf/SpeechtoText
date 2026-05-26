@@ -1,0 +1,16 @@
+appId: com.omersahin.seslidikte
+productName: Sesli Dikte
+directories:
+  output: dist
+files:
+  - out/**
+  - resources/**
+mac:
+  category: public.app-category.productivity
+  target: dmg
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  notarize: false
+win:
+  target: nsis

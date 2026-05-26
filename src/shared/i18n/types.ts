@@ -1,0 +1,161 @@
+export interface Translations {
+  appName: string
+  settings: {
+    title: string
+    tabs: {
+      general: string
+      keyboard: string
+      ai: string
+      microphone: string
+      permissions: string
+      snippets: string
+      history: string
+      about: string
+    }
+    general: {
+      title: string
+      subtitle: string
+      groqApiKey: string
+      groqApiKeyGet: string
+      dashscopeApiKey: string
+      dashscopeApiKeyGet: string
+      dashscopeBaseUrl: string
+      clipboardMethod: string
+      overlayEnabled: string
+      overlayEnabledDesc: string
+      autoApply: string
+      autoApplyDesc: string
+      uiLanguage: string
+    }
+    keyboard: {
+      title: string
+      subtitle: string
+      hotkey: string
+      mode: string
+      pushToTalk: string
+      pushToTalkDesc: string
+      toggle: string
+      toggleDesc: string
+    }
+    ai: {
+      title: string
+      subtitle: string
+      llmEnabled: string
+      llmEnabledDesc: string
+      model: string
+      cleaningMode: string
+      temperature: string
+      temperatureMin: string
+      temperatureMax: string
+      testButton: string
+      testing: string
+      vocabPreset: string
+      vocabPresetDesc: string
+      vocabPresetNone: string
+      vocabPresetSoftware: string
+      vocabPresetMedical: string
+      vocabPresetLegal: string
+      appContext: string
+      appContextDesc: string
+      customPrompt: string
+      customPromptPlaceholder: string
+      customPromptDesc: string
+      customVocabTitle: string
+      customVocabDesc: string
+      customVocabTerm: string
+      customVocabReplacement: string
+      customVocabAdd: string
+      customVocabEmpty: string
+    }
+    microphone: {
+      title: string
+      subtitle: string
+      device: string
+      deviceDefault: string
+      refresh: string
+      autoRefresh: string
+    }
+    permissions: {
+      title: string
+      subtitle: string
+      microphone: string
+      microphoneDesc: string
+      requestMic: string
+      check: string
+      openSystemSettings: string
+      openSystemSettingsClose: string
+      accessibility: string
+      accessibilityDesc: string
+      accessibilityGranted: string
+      restart: string
+      accessibilityUnsupported: string
+    }
+    snippets: {
+      title: string
+      subtitle: string
+      trigger: string
+      expansion: string
+      add: string
+      empty: string
+      triggerPlaceholder: string
+      expansionPlaceholder: string
+    }
+    history: {
+      title: string
+      subtitle: string
+      searchPlaceholder: string
+      deleteAll: string
+      deleteAllConfirm: string
+      empty: string
+      copy: string
+      delete: string
+      reinject: string
+      export: string
+      exportJson: string
+      exportMarkdown: string
+      exportCsv: string
+      rawText: string
+      rawLabel: string
+      latency: string
+    }
+    about: {
+      title: string
+      subtitle: string
+      version: string
+      platform: string
+      openLogs: string
+      restartOnboarding: string
+      github: string
+    }
+    save: string
+    saving: string
+    saved: string
+    saveFailed: string
+    loadFailed: string
+  }
+  errors: {
+    apiKeyMissing: string
+    apiKeyMissingDesc: string
+    asrFailed: string
+    asrFailedDesc: string
+    llmFailed: string
+    llmFailedDesc: string
+    injectionFailed: string
+    injectionFailedDesc: string
+    audioAnalysisFailed: string
+    unknownError: string
+    openSettings: string
+  }
+  overlay: {
+    cancelled: string
+    aiSkipped: string
+    clickToPaste: string
+    success: string
+  }
+  tray: {
+    settings: string
+    recentDictations: string
+    noRecentDictations: string
+    quit: string
+  }
+}
