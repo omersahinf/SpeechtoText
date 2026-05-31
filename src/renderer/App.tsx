@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import type { AppSettings } from '@/shared/types'
+import { AppearanceProvider } from '@/renderer/context/AppearanceContext'
 import Onboarding from '@/renderer/pages/Onboarding'
 import Settings from '@/renderer/pages/Settings'
 
@@ -16,14 +17,20 @@ export default function App(): ReactElement {
 
   if (!settings.onboardingCompleted) {
     return (
-      <Onboarding
-        initialSettings={settings}
-        onComplete={() =>
-          setSettings((current) => current && { ...current, onboardingCompleted: true })
-        }
-      />
+      <AppearanceProvider initialSettings={settings}>
+        <Onboarding
+          initialSettings={settings}
+          onComplete={() =>
+            setSettings((current) => current && { ...current, onboardingCompleted: true })
+          }
+        />
+      </AppearanceProvider>
     )
   }
 
-  return <Settings />
+  return (
+    <AppearanceProvider initialSettings={settings}>
+      <Settings />
+    </AppearanceProvider>
+  )
 }

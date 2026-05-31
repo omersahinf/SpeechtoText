@@ -69,7 +69,7 @@ export function MicrophoneTab({ settings, onChange }: MicrophoneTabProps): React
           <select
             value={settings.microphoneDeviceId}
             aria-label="Kayıt cihazı"
-            className="h-11 rounded-lg border border-neutral-700 bg-neutral-950 px-3 text-neutral-100 outline-none transition focus:border-emerald-400"
+            className="h-11 rounded-lg border border-neutral-700 bg-neutral-950 px-3 text-neutral-100 outline-none transition focus:border-sd-accent"
             onChange={(e) => onChange({ microphoneDeviceId: e.target.value })}
           >
             <option value="">Sistem varsayılanı</option>

@@ -29,6 +29,58 @@ export interface CustomVocabStore {
   add: (term: string, replacement: string) => CustomVocabEntry
   delete: (id: string) => void
   buildPromptFragment: () => string
+  applyToText: (text: string) => string
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function toAsciiLower(value: string): string {
+  return value
+    .toLocaleLowerCase('tr')
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ş/g, 's')
+    .replace(/ı/g, 'i')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c')
+}
+
+function buildMatchVariants(term: string, replacement: string): string[] {
+  const variants = new Set<string>()
+
+  for (const value of [term, replacement]) {
+    const trimmed = value.trim()
+    if (!trimmed) continue
+
+    const ascii = toAsciiLower(trimmed)
+    variants.add(trimmed)
+    variants.add(ascii)
+
+    if (ascii === 'cloud' || ascii === 'claude') {
+      variants.add('cloud')
+      variants.add('claude')
+      variants.add('klaud')
+      variants.add('klod')
+    }
+  }
+
+  return Array.from(variants).sort((a, b) => b.length - a.length)
+}
+
+function applyVocabEntries(text: string, entries: CustomVocabEntry[]): string {
+  return entries.reduce((current, entry) => {
+    const variants = buildMatchVariants(entry.term, entry.replacement)
+    if (variants.length === 0 || !entry.replacement.trim()) {
+      return current
+    }
+
+    const source = variants.map(escapeRegExp).join('|')
+    const pattern = new RegExp(`(^|[^\\p{L}\\p{N}_])(${source})(?=$|[^\\p{L}\\p{N}_])`, 'giu')
+
+    return current.replace(pattern, (_match, prefix: string) => `${prefix}${entry.replacement}`)
+  }, text)
 }
 
 export function createCustomVocabStore(): CustomVocabStore {
@@ -72,6 +124,10 @@ export function createCustomVocabStore(): CustomVocabStore {
         .join('\n')
 
       return `\nÖZEL TERİMLER (kesinlikle bu şekilde yaz):\n${lines}`
+    },
+
+    applyToText(text: string): string {
+      return applyVocabEntries(text, getAll())
     }
   }
 }

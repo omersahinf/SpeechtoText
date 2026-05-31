@@ -1,5 +1,6 @@
 import { join } from 'node:path'
-import { Menu, Tray, app, clipboard, nativeImage } from 'electron'
+import { BrowserWindow, Menu, Tray, app, clipboard, nativeImage, screen } from 'electron'
+import { is } from '@electron-toolkit/utils'
 import { logger } from './logger'
 import type { DictationEntry } from '@/shared/types'
 
@@ -45,6 +46,7 @@ export function createTray({
   let isDestroyed = false
   let errorTimer: ReturnType<typeof setTimeout> | null = null
   let recentDictations: DictationEntry[] = getRecentDictations?.() ?? []
+  let popoverWindow: BrowserWindow | null = null
 
   const tray = new Tray(loadIcon('tray-idle.png', process.platform === 'darwin'))
   tray.setToolTip('Sesli Dikte')
@@ -115,8 +117,68 @@ export function createTray({
     tray.setContextMenu(contextMenu)
   }
 
+  const showTrayPopover = (): void => {
+    if (isDestroyed) return
+
+    if (popoverWindow && !popoverWindow.isDestroyed()) {
+      if (popoverWindow.isVisible()) {
+        popoverWindow.hide()
+        return
+      }
+      popoverWindow.showInactive()
+      return
+    }
+
+    popoverWindow = new BrowserWindow({
+      width: 320,
+      height: 360,
+      frame: false,
+      transparent: true,
+      resizable: false,
+      skipTaskbar: true,
+      show: false,
+      title: 'Sesli Dikte',
+      autoHideMenuBar: true,
+      webPreferences: {
+        preload: join(__dirname, '../preload/index.js'),
+        sandbox: false,
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    })
+
+    const trayBounds = tray.getBounds()
+    const display = screen.getDisplayNearestPoint({ x: trayBounds.x, y: trayBounds.y })
+    const { bounds } = display
+    const x = Math.round(
+      Math.min(
+        Math.max(trayBounds.x + trayBounds.width / 2 - 160, bounds.x + 8),
+        bounds.x + bounds.width - 328
+      )
+    )
+    const y =
+      process.platform === 'darwin'
+        ? Math.round(trayBounds.y + trayBounds.height + 8)
+        : Math.round(trayBounds.y - 368)
+    popoverWindow.setBounds({ x, y, width: 320, height: 360 })
+
+    popoverWindow.on('blur', () => popoverWindow?.hide())
+    popoverWindow.on('closed', () => {
+      popoverWindow = null
+    })
+
+    if (is.dev && process.env.ELECTRON_RENDERER_URL) {
+      popoverWindow.loadURL(`${process.env.ELECTRON_RENDERER_URL}/#/tray`)
+    } else {
+      popoverWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: '/tray' })
+    }
+
+    popoverWindow.once('ready-to-show', () => popoverWindow?.showInactive())
+  }
+
   buildMenu()
-  tray.on('click', showSettingsWindow)
+  tray.on('click', showTrayPopover)
+  tray.on('double-click', showSettingsWindow)
 
   const destroy = (): void => {
     if (isDestroyed) return
@@ -124,6 +186,9 @@ export function createTray({
     if (errorTimer) {
       clearTimeout(errorTimer)
       errorTimer = null
+    }
+    if (popoverWindow && !popoverWindow.isDestroyed()) {
+      popoverWindow.destroy()
     }
     tray.destroy()
   }

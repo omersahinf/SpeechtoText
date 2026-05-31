@@ -33,7 +33,7 @@ export function KeyboardTab({ settings, onChange }: KeyboardTabProps): ReactElem
               aria-checked={settings.hotkeyMode === 'push-to-talk'}
               className={`rounded-lg border p-4 text-left text-sm transition ${
                 settings.hotkeyMode === 'push-to-talk'
-                  ? 'border-emerald-400/40 bg-emerald-400/5 text-emerald-300'
+                  ? 'border-sd-accent bg-sd-hover text-sd-accent'
                   : 'border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-700'
               }`}
               onClick={() => onChange({ hotkeyMode: 'push-to-talk' as HotkeyMode })}
@@ -47,7 +47,7 @@ export function KeyboardTab({ settings, onChange }: KeyboardTabProps): ReactElem
               aria-checked={settings.hotkeyMode === 'toggle'}
               className={`rounded-lg border p-4 text-left text-sm transition ${
                 settings.hotkeyMode === 'toggle'
-                  ? 'border-emerald-400/40 bg-emerald-400/5 text-emerald-300'
+                  ? 'border-sd-accent bg-sd-hover text-sd-accent'
                   : 'border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-700'
               }`}
               onClick={() => onChange({ hotkeyMode: 'toggle' as HotkeyMode })}

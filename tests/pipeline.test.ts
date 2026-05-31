@@ -6,6 +6,9 @@ vi.mock('electron', () => ({
   clipboard: {
     writeText: vi.fn(),
     readText: vi.fn().mockReturnValue('')
+  },
+  net: {
+    isOnline: vi.fn().mockReturnValue(true)
   }
 }))
 
@@ -92,6 +95,10 @@ function makeDeps(
     llm?: { cleanTranscript: ReturnType<typeof vi.fn> }
     injector?: { injectText: ReturnType<typeof vi.fn> }
     settings?: Partial<AppSettings>
+    customVocab?: {
+      buildPromptFragment: ReturnType<typeof vi.fn>
+      applyToText: ReturnType<typeof vi.fn>
+    }
   } = {}
 ) {
   const hotkey = new EventEmitter() as EventEmitter & {
@@ -139,6 +146,10 @@ function makeDeps(
     injectText: vi.fn().mockResolvedValue(undefined)
   }
   const settings = { ...baseSettings, ...overrides.settings }
+  const customVocab = overrides.customVocab ?? {
+    buildPromptFragment: vi.fn().mockReturnValue(''),
+    applyToText: vi.fn((text: string) => text)
+  }
 
   return {
     deps: {
@@ -149,7 +160,8 @@ function makeDeps(
       injector,
       tray: tray as unknown as Parameters<typeof createPipeline>[0]['tray'],
       overlay: overlay as unknown as Parameters<typeof createPipeline>[0]['overlay'],
-      settings: { get: () => settings }
+      settings: { get: () => settings },
+      customVocab
     },
     hotkey,
     asr,
@@ -157,7 +169,8 @@ function makeDeps(
     injector,
     overlay,
     tray,
-    recorder
+    recorder,
+    customVocab
   }
 }
 
@@ -229,7 +242,39 @@ describe('pipeline', () => {
 
     expect(injector.injectText).not.toHaveBeenCalled()
     expect(tray.flashError).toHaveBeenCalled()
-    expect(overlay.sendState).toHaveBeenCalledWith('error', { message: 'Transkripsiyon başarısız' })
+    expect(overlay.sendState).toHaveBeenCalledWith('error', { message: 'Çevrimdışı' })
+  })
+
+  it('skips LLM with a warning when DashScope key is missing', async () => {
+    const { deps, hotkey, llm, injector, overlay } = makeDeps({
+      settings: { dashscopeApiKey: '' }
+    })
+    const pipeline = createPipeline(deps)
+
+    await transitionToProcessing(pipeline, hotkey)
+    await pipeline.handleAudioBuffer(makeWavBuffer())
+
+    expect(llm.cleanTranscript).not.toHaveBeenCalled()
+    expect(injector.injectText).toHaveBeenCalledWith('merhaba')
+    expect(overlay.showMessage).toHaveBeenCalledWith('AI temizleme atlandı')
+  })
+
+  it('applies custom vocab after LLM cleanup', async () => {
+    const llm = {
+      cleanTranscript: vi.fn().mockResolvedValue({ text: 'Klaud ile yaz.', latencyMs: 5 })
+    }
+    const customVocab = {
+      buildPromptFragment: vi.fn().mockReturnValue('\nÖZEL TERİMLER'),
+      applyToText: vi.fn().mockReturnValue('Claude ile yaz.')
+    }
+    const { deps, hotkey, injector } = makeDeps({ llm, customVocab })
+    const pipeline = createPipeline(deps)
+
+    await transitionToProcessing(pipeline, hotkey)
+    await pipeline.handleAudioBuffer(makeWavBuffer())
+
+    expect(customVocab.applyToText).toHaveBeenCalledWith('Klaud ile yaz.')
+    expect(injector.injectText).toHaveBeenCalledWith('Claude ile yaz.')
   })
 
   it('errors when groqApiKey missing', async () => {

@@ -71,7 +71,7 @@ export function HistoryTab(): ReactElement {
           <p className="mt-1 text-sm text-neutral-500">Son {entries.length} dikte kaydı</p>
         </div>
         <div className="flex gap-2 items-center">
-          {exportStatus && <span className="text-xs text-emerald-400">{exportStatus}</span>}
+          {exportStatus && <span className="text-xs text-sd-accent">{exportStatus}</span>}
           {entries.length > 0 && (
             <>
               <div className="relative group">
@@ -123,7 +123,7 @@ export function HistoryTab(): ReactElement {
           placeholder="Geçmişte ara…"
           value={search}
           aria-label="Geçmişte ara"
-          className="h-10 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 text-sm text-neutral-100 outline-none transition focus:border-emerald-400 placeholder:text-neutral-600"
+          className="h-10 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 text-sm text-neutral-100 outline-none transition focus:border-sd-accent placeholder:text-neutral-600"
           onChange={(e) => setSearch(e.target.value)}
         />
       )}
@@ -158,7 +158,7 @@ export function HistoryTab(): ReactElement {
                     type="button"
                     title="Tekrar yapıştır"
                     aria-label="Tekrar yapıştır"
-                    className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-emerald-500 hover:bg-emerald-500/10 transition"
+                    className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-sd-accent hover:bg-sd-hover transition"
                     onClick={() => void reinjectEntry(entry.id)}
                   >
                     Yapıştır

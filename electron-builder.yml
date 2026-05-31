@@ -6,6 +6,7 @@ files:
   - out/**
   - resources/**
 mac:
+  icon: resources/icons/icon-512.png
   category: public.app-category.productivity
   target: dmg
   hardenedRuntime: true
@@ -13,4 +14,5 @@ mac:
   entitlementsInherit: build/entitlements.mac.plist
   notarize: false
 win:
+  icon: resources/icons/icon-256.png
   target: nsis

@@ -1,283 +1,158 @@
-import { useEffect, useRef, useState, type ReactElement } from 'react'
+import { useEffect, useState, type ReactElement, type ReactNode } from 'react'
 import type { AppSettings, PermissionSnapshot } from '@/shared/types'
 import { HotkeyRecorder } from '@/renderer/components/HotkeyRecorder'
-import { StepIndicator } from '@/renderer/components/StepIndicator'
 import { MicLevelMeter } from '@/renderer/components/MicLevelMeter'
 import { getPermissionLabel } from '@/renderer/lib/permission-labels'
+import { getHotkeyShortLabel } from '@/shared/hotkeys'
 
 interface OnboardingProps {
   initialSettings: AppSettings
   onComplete: () => void
 }
 
-const STEPS = ['Hoşgeldin', 'Mikrofon', 'Erişim', 'API', 'Hotkey', 'İlk Dikte']
+interface StepShellProps {
+  step: number
+  title: string
+  subtitle: string
+  hint?: string
+  cta?: string
+  back?: boolean
+  children: ReactNode
+  onBack: () => void
+  onNext: () => void
+  onSkip: () => void
+}
 
-// Simple inline SVG illustrations
-function WelcomeIllustration(): ReactElement {
+const TOTAL_STEPS = 6
+
+function StepShell({
+  step,
+  title,
+  subtitle,
+  hint,
+  cta = 'Devam et',
+  back = true,
+  children,
+  onBack,
+  onNext,
+  onSkip
+}: StepShellProps): ReactElement {
   return (
-    <svg viewBox="0 0 120 120" className="h-24 w-24 text-emerald-400" fill="none">
-      <circle cx="60" cy="60" r="56" stroke="currentColor" strokeWidth="2" opacity="0.15" />
-      <circle cx="60" cy="60" r="40" stroke="currentColor" strokeWidth="2" opacity="0.3" />
-      <path
-        d="M60 30v60M45 50l15-20 15 20M45 70l15 20 15-20"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function MicrophoneIllustration(): ReactElement {
-  return (
-    <svg viewBox="0 0 120 120" className="h-24 w-24 text-emerald-400" fill="none">
-      <rect x="44" y="20" width="32" height="52" rx="16" stroke="currentColor" strokeWidth="2.5" />
-      <path
-        d="M32 62a28 28 0 0056 0"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      <line
-        x1="60"
-        y1="90"
-        x2="60"
-        y2="105"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      <line
-        x1="46"
-        y1="105"
-        x2="74"
-        y2="105"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      {/* Sound waves */}
-      <path
-        d="M84 45a12 12 0 010 22"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        opacity="0.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M90 38a22 22 0 010 36"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        opacity="0.3"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
-function AccessibilityIllustration(): ReactElement {
-  return (
-    <svg viewBox="0 0 120 120" className="h-24 w-24 text-emerald-400" fill="none">
-      <circle cx="60" cy="32" r="10" stroke="currentColor" strokeWidth="2.5" />
-      <path
-        d="M38 52h44M60 52v30M44 100l16-18 16 18"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M20 60a40 40 0 0180 0"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        opacity="0.2"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
-function KeyIllustration(): ReactElement {
-  return (
-    <svg viewBox="0 0 120 120" className="h-24 w-24 text-emerald-400" fill="none">
-      <rect x="20" y="40" width="80" height="45" rx="8" stroke="currentColor" strokeWidth="2.5" />
-      <rect
-        x="42"
-        y="52"
-        width="36"
-        height="12"
-        rx="3"
-        stroke="currentColor"
-        strokeWidth="2"
-        opacity="0.6"
-      />
-      <rect
-        x="30"
-        y="52"
-        width="8"
-        height="12"
-        rx="2"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        opacity="0.3"
-      />
-      <rect
-        x="82"
-        y="52"
-        width="8"
-        height="12"
-        rx="2"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        opacity="0.3"
-      />
-      <rect
-        x="35"
-        y="68"
-        width="50"
-        height="8"
-        rx="2"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        opacity="0.4"
-      />
-    </svg>
-  )
-}
-
-function ApiIllustration(): ReactElement {
-  return (
-    <svg viewBox="0 0 120 120" className="h-24 w-24 text-emerald-400" fill="none">
-      <rect x="25" y="30" width="70" height="60" rx="8" stroke="currentColor" strokeWidth="2.5" />
-      <circle cx="60" cy="55" r="3" fill="currentColor" opacity="0.6" />
-      <path
-        d="M45 70h30"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        opacity="0.4"
-      />
-      <path
-        d="M40 50l-8-12M80 50l8-12"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        opacity="0.3"
-      />
-      <circle cx="32" cy="35" r="4" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
-      <circle cx="88" cy="35" r="4" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
-    </svg>
-  )
-}
-
-function TestIllustration(): ReactElement {
-  return (
-    <svg viewBox="0 0 120 120" className="h-24 w-24 text-emerald-400" fill="none">
-      <circle cx="60" cy="60" r="36" stroke="currentColor" strokeWidth="2.5" />
-      <path
-        d="M48 60l8 8 16-16"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* Sparkles */}
-      <path d="M90 30l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="currentColor" opacity="0.3" />
-      <path
-        d="M24 80l1.5 4.5 4.5 1.5-4.5 1.5-1.5 4.5-1.5-4.5-4.5-1.5 4.5-1.5z"
-        fill="currentColor"
-        opacity="0.2"
-      />
-    </svg>
-  )
-}
-
-const ILLUSTRATIONS = [
-  WelcomeIllustration,
-  MicrophoneIllustration,
-  AccessibilityIllustration,
-  ApiIllustration,
-  KeyIllustration,
-  TestIllustration
-]
-
-interface OnboardingHotkeyStepProps {
-  hotkeyKeyCode: number
-  onChange: (code: number) => void
-}
-
-const DOM_KEY_MAP: Record<string, number> = {
-  AltRight: 3640,
-  ControlRight: 3613,
-  MetaRight: 3676,
-  F8: 66,
-  F9: 67,
-  F10: 68,
-  F12: 88
-}
-
-function OnboardingHotkeyStep({
-  hotkeyKeyCode,
-  onChange
-}: OnboardingHotkeyStepProps): ReactElement {
-  const [testState, setTestState] = useState<'idle' | 'listening' | 'ok'>('idle')
-  const stopRef = useRef<(() => void) | null>(null)
-
-  function startTest(): void {
-    stopRef.current?.()
-    setTestState('listening')
-
-    const onKey = (e: KeyboardEvent): void => {
-      const code = DOM_KEY_MAP[e.code]
-      if (code === hotkeyKeyCode) {
-        e.preventDefault()
-        setTestState('ok')
-        window.setTimeout(() => setTestState('idle'), 2000)
-        stopRef.current?.()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    const timer = window.setTimeout(() => {
-      stopRef.current?.()
-      setTestState('idle')
-    }, 5000)
-    stopRef.current = () => {
-      window.removeEventListener('keydown', onKey)
-      window.clearTimeout(timer)
-      stopRef.current = null
-    }
-  }
-
-  return (
-    <div className="animate-fade-in">
-      <h2 className="text-2xl font-semibold tracking-tight">Hotkey seçimi</h2>
-      <p className="mt-4 text-sm leading-7 text-neutral-400">
-        Dikte başlatmak için bir kısayol tuşu seç. Varsayılan: <strong>Right Option / Alt</strong>.
-        Basılı tutarak konuşursun, bırakınca metin yazılır.
-      </p>
-      <div className="mt-6 max-w-xl">
-        <HotkeyRecorder value={hotkeyKeyCode} onChange={onChange} />
-      </div>
-      <div className="mt-4 flex items-center gap-4">
-        <button
-          type="button"
-          onClick={startTest}
-          disabled={testState === 'listening'}
-          className="h-10 rounded-lg border border-neutral-700 px-4 text-sm text-neutral-300 transition hover:border-emerald-400 disabled:opacity-60"
-        >
-          {testState === 'listening' ? 'Kısayola bas…' : '→ Şimdi test et'}
-        </button>
-        {testState === 'ok' && (
-          <span className="text-sm font-medium text-emerald-400" role="status">
-            ✓ Algılandı!
+    <main className="sd-app-bg min-h-screen p-4">
+      <section className="mx-auto flex min-h-[calc(100vh-32px)] w-full max-w-[780px] flex-col overflow-hidden rounded-sdXl border border-sd-border bg-sd-solid shadow-sdHard">
+        <div className="flex items-center gap-1 px-8 pt-5">
+          {Array.from({ length: TOTAL_STEPS }, (_, index) => (
+            <span
+              key={index}
+              className={`h-[3px] flex-1 rounded-sdPill ${
+                index <= step ? 'bg-sd-accent' : 'bg-sd-hover'
+              }`}
+            />
+          ))}
+          <span className="ml-2 font-mono text-[11px] text-sd-faint">
+            {step + 1} / {TOTAL_STEPS}
           </span>
-        )}
-        {testState === 'idle' && (
-          <span className="text-xs text-neutral-600">Tuşa basarak çalıştığını doğrula</span>
-        )}
+        </div>
+
+        <div className="flex flex-1 flex-col gap-6 px-14 py-8">
+          <header>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.10em] text-sd-accent">
+              Adım {step + 1}
+            </p>
+            <h1 className="max-w-xl text-[32px] font-bold leading-[1.1] tracking-[-0.025em] text-sd-text">
+              {title}
+            </h1>
+            <p className="mt-2 max-w-xl text-[15px] leading-[1.45] text-sd-dim">{subtitle}</p>
+          </header>
+
+          <div className="min-h-0 flex-1">{children}</div>
+
+          {hint && (
+            <p className="flex items-center gap-1.5 text-xs text-sd-faint">
+              <span aria-hidden="true">ⓘ</span>
+              {hint}
+            </p>
+          )}
+        </div>
+
+        <footer className="flex items-center gap-3 border-t border-sd-border px-8 pb-5 pt-4">
+          {back && (
+            <button
+              type="button"
+              className="rounded-sdMd px-3.5 py-2 text-[13px] font-medium text-sd-dim transition hover:text-sd-text"
+              onClick={onBack}
+            >
+              ← Geri
+            </button>
+          )}
+          <span className="flex-1" />
+          <button
+            type="button"
+            className="rounded-sdMd border border-sd-border px-5 py-2.5 text-[13px] font-medium text-sd-dim transition hover:bg-sd-hover hover:text-sd-text"
+            onClick={onSkip}
+          >
+            Sonra
+          </button>
+          <button
+            type="button"
+            className="sd-cta px-5 py-2.5 text-[13px] font-semibold"
+            onClick={onNext}
+          >
+            {cta}
+          </button>
+        </footer>
+      </section>
+    </main>
+  )
+}
+
+function BrandHero(): ReactElement {
+  return (
+    <div className="relative h-[220px] w-[360px]">
+      <div className="absolute left-1/2 top-1/2 grid h-[140px] w-[140px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-[32px] bg-[linear-gradient(135deg,var(--sd-accent-hero),var(--sd-accent-deep))] shadow-sdGlow">
+        <svg width="72" height="72" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+          <path
+            d="M14 32Q32 14 50 32"
+            stroke="rgba(255,255,255,0.45)"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+          />
+          <path
+            d="M22 36Q32 24 42 36"
+            stroke="rgba(255,255,255,0.72)"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+          />
+          <rect x="29" y="34" width="6" height="14" rx="3" fill="#fff" />
+          <path d="M24 44Q32 52 40 44" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" />
+        </svg>
       </div>
+      {[
+        ['Türkçe odaklı', 'left-0 top-5'],
+        ['Kod-switching', 'right-5 top-4'],
+        ['Quick Edit', 'bottom-9 right-0'],
+        ['Sistem geneli', 'bottom-8 left-1']
+      ].map(([label, position]) => (
+        <span
+          key={label}
+          className={`absolute ${position} rounded-sdPill border border-sd-border bg-sd-surface px-2.5 py-1.5 text-[11.5px] font-medium text-sd-text shadow-sdSoft`}
+        >
+          {label}
+        </span>
+      ))}
     </div>
+  )
+}
+
+function ToggleMock({ on }: { on: boolean }): ReactElement {
+  return (
+    <span className={`relative h-[18px] w-8 rounded-sdPill ${on ? 'bg-sd-accent' : 'bg-sd-hover'}`}>
+      <span
+        className={`absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow-sm ${
+          on ? 'left-4' : 'left-0.5'
+        }`}
+      />
+    </span>
   )
 }
 
@@ -286,344 +161,325 @@ export default function Onboarding({ initialSettings, onComplete }: OnboardingPr
   const [settings, setSettings] = useState<AppSettings>(initialSettings)
   const [permissions, setPermissions] = useState<PermissionSnapshot | null>(null)
   const [status, setStatus] = useState('')
-  const [accessibilityJustGranted, setAccessibilityJustGranted] = useState(false)
+  const micPermission = getPermissionLabel(permissions?.microphone ?? 'unknown')
+  const accPermission = getPermissionLabel(permissions?.accessibility ?? 'denied')
 
   useEffect(() => {
     void window.api.permissions.check().then(setPermissions)
   }, [])
 
-  // P1: Listen for accessibility permission granted event
-  useEffect(() => {
-    const unsubscribe = window.api.permissions.onAccessibilityGranted(() => {
-      setAccessibilityJustGranted(true)
-      void window.api.permissions.check().then(setPermissions)
-    })
-
-    return unsubscribe
-  }, [])
-
   async function requestMicrophone(): Promise<void> {
-    const nextPermissions = await window.api.permissions.requestMicrophone()
-    setPermissions(nextPermissions)
+    setPermissions(await window.api.permissions.requestMicrophone())
   }
 
   async function refreshPermissions(): Promise<void> {
-    const nextPermissions = await window.api.permissions.check()
-    setPermissions(nextPermissions)
-  }
-
-  async function handleRelaunch(): Promise<void> {
-    await window.api.app.relaunch()
+    setPermissions(await window.api.permissions.check())
   }
 
   async function finish(): Promise<void> {
     setStatus('')
-
     try {
-      await window.api.settings.set({
-        ...settings,
-        onboardingCompleted: true
-      })
+      await window.api.settings.set({ ...settings, onboardingCompleted: true })
       onComplete()
-    } catch (error) {
-      console.error(error)
-      setStatus('Onboarding tamamlanamadı.')
+    } catch {
+      setStatus('Kurulum tamamlanamadı.')
     }
   }
 
-  const canContinueApi = Boolean(settings.groqApiKey.trim() && settings.dashscopeApiKey.trim())
-  const Illustration = ILLUSTRATIONS[step] ?? WelcomeIllustration
-  const micPermission = getPermissionLabel(permissions?.microphone ?? 'unknown')
-  const accPermission = getPermissionLabel(permissions?.accessibility ?? 'denied')
+  function next(): void {
+    if (step === TOTAL_STEPS - 1) {
+      void finish()
+      return
+    }
+    setStep((current) => Math.min(TOTAL_STEPS - 1, current + 1))
+  }
 
-  return (
-    <main className="min-h-screen bg-neutral-950 text-neutral-100">
-      <section className="mx-auto flex min-h-screen w-full max-w-4xl flex-col px-6 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium uppercase tracking-wider text-emerald-400">
-              Sesli Dikte
+  const shellProps = {
+    step,
+    onBack: () => setStep((current) => Math.max(0, current - 1)),
+    onNext: next,
+    onSkip: () => void finish()
+  }
+
+  if (step === 0) {
+    return (
+      <StepShell
+        {...shellProps}
+        back={false}
+        cta="Başlayalım →"
+        title="Türkçe'ye yakışan sesli dikte"
+        subtitle="Bir tuşa basılı tut, konuş, bırak. Konuştuğun her şey temiz, noktalanmış Türkçe metin olarak aktif uygulamaya yazılır."
+      >
+        <div className="flex h-full items-center justify-center">
+          <BrandHero />
+        </div>
+      </StepShell>
+    )
+  }
+
+  if (step === 1) {
+    return (
+      <StepShell
+        {...shellProps}
+        title="Mikrofon iznini ver"
+        subtitle="SesliDikte sadece sen kısayolu basılı tutarken dinler. Ses verisi yalnızca o sırada işlenir."
+        hint="İzin reddedildi mi? Sistem Ayarları → Gizlilik → Mikrofon'dan değiştirebilirsin."
+      >
+        <div className="flex h-full items-center gap-4">
+          <div className="sd-panel flex-1 p-5">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-sd-dim">
+              Canlı seviye
             </p>
-            <h1 className="mt-1 text-xl font-semibold tracking-tight">Kurulum</h1>
-          </div>
-          <button
-            type="button"
-            className="rounded-md px-3 py-1.5 text-xs text-neutral-500 transition hover:text-neutral-300"
-            onClick={() => {
-              if (
-                window.confirm(
-                  'API anahtarları girilmeden uygulama çalışmaz. Kurulumu atlamak istediğinden emin misin?'
-                )
-              ) {
-                void finish()
-              }
-            }}
-          >
-            Sonra ›
-          </button>
-        </div>
-
-        {/* Step Indicator */}
-        <div className="mt-6">
-          <StepIndicator steps={STEPS} currentStep={step} onStepClick={setStep} />
-        </div>
-
-        {/* Content */}
-        <div className="mt-8 flex flex-1 flex-col rounded-xl border border-neutral-800/60 bg-neutral-900/50 backdrop-blur-sm">
-          <div className="flex flex-1 items-start gap-10 p-8 max-md:flex-col">
-            {/* Left: Illustration */}
-            <div className="flex w-36 shrink-0 items-start justify-center pt-4 max-md:w-full max-md:pb-4">
-              <div className="animate-fade-in">
-                <Illustration />
-              </div>
-            </div>
-
-            {/* Right: Content */}
-            <div className="flex-1">
-              {/* Step 0: Hoşgeldin */}
-              {step === 0 && (
-                <div className="animate-fade-in">
-                  <h2 className="text-2xl font-semibold tracking-tight">
-                    Türkçe dikte akışını hazırlayalım
-                  </h2>
-                  <p className="mt-4 max-w-2xl text-sm leading-7 text-neutral-400">
-                    Birkaç adımda uygulamayı kuracağız. Hotkey ile kayıt al, Groq Whisper ile metne
-                    çevir, Qwen ile Türkçe noktalama ve dolgu temizliği yap — hepsi otomatik. ✨
-                  </p>
-                  <div className="mt-6 flex flex-col gap-3 rounded-lg border border-neutral-800/40 bg-neutral-950/50 p-4 text-sm text-neutral-500">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-400/10 text-xs text-emerald-400">
-                        1
-                      </span>
-                      <span>Mikrofon ve Accessibility izinleri</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-400/10 text-xs text-emerald-400">
-                        2
-                      </span>
-                      <span>API anahtarlarını gir</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-400/10 text-xs text-emerald-400">
-                        3
-                      </span>
-                      <span>Hotkey seç ve ilk dikteni yap</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 1: Mikrofon */}
-              {step === 1 && (
-                <div className="animate-fade-in">
-                  <h2 className="text-2xl font-semibold tracking-tight">Mikrofon erişimi</h2>
-                  <p className="mt-4 text-sm leading-7 text-neutral-400">
-                    Sesini duyabilmem için mikrofon erişimi gerekli. Aşağıdaki butona tıklayarak
-                    izin verebilirsin.
-                  </p>
-                  <div className="mt-6 flex items-center gap-4">
-                    <button
-                      type="button"
-                      className="h-11 rounded-lg bg-emerald-400 px-5 text-sm font-medium text-neutral-950 transition hover:bg-emerald-300 active:scale-[0.98]"
-                      onClick={() => void requestMicrophone()}
-                    >
-                      Mikrofon İzni İste
-                    </button>
-                    <span className={`text-sm font-medium ${micPermission.color}`}>
-                      {micPermission.text}
-                    </span>
-                  </div>
-                  {permissions?.microphone === 'granted' && (
-                    <div className="mt-6">
-                      <MicLevelMeter isActive deviceId={settings.microphoneDeviceId || undefined} />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Step 2: Accessibility */}
-              {step === 2 && (
-                <div className="animate-fade-in">
-                  <h2 className="text-2xl font-semibold tracking-tight">Accessibility izni</h2>
-                  <p className="mt-4 text-sm leading-7 text-neutral-400">
-                    Konuşmanı yazıya çevirip aktif uygulamana yazabilmem için bu izin şart. macOS,
-                    bu iznin elle verilmesini gerektirir.
-                  </p>
-                  <div className="mt-6 flex items-center gap-4">
-                    <span className={`text-sm font-medium ${accPermission.color}`}>
-                      {accPermission.text}
-                    </span>
-                  </div>
-
-                  {permissions?.accessibility !== 'granted' && (
-                    <div className="mt-5 flex gap-3">
-                      <button
-                        type="button"
-                        className="h-11 rounded-lg bg-emerald-400 px-5 text-sm font-medium text-neutral-950 transition hover:bg-emerald-300 active:scale-[0.98]"
-                        onClick={() => void window.api.permissions.openAccessibilitySettings()}
-                      >
-                        Ayarları Aç
-                      </button>
-                      <button
-                        type="button"
-                        className="h-11 rounded-lg border border-neutral-700 px-4 text-sm text-neutral-300 transition hover:border-neutral-500"
-                        onClick={() => void refreshPermissions()}
-                      >
-                        Tekrar Kontrol Et
-                      </button>
-                    </div>
-                  )}
-
-                  {/* P1: Restart button when permission just granted */}
-                  {accessibilityJustGranted && permissions?.accessibility === 'granted' && (
-                    <div className="mt-6 rounded-lg border border-emerald-400/30 bg-emerald-400/5 p-4">
-                      <p className="text-sm text-emerald-300">
-                        ✓ Accessibility izni verildi! Değişikliğin etkili olması için uygulamayı
-                        yeniden başlatman gerekiyor.
-                      </p>
-                      <button
-                        type="button"
-                        className="mt-3 h-10 rounded-lg bg-emerald-400 px-5 text-sm font-medium text-neutral-950 transition hover:bg-emerald-300 active:scale-[0.98]"
-                        onClick={() => void handleRelaunch()}
-                      >
-                        Yeniden Başlat
-                      </button>
-                    </div>
-                  )}
-
-                  {permissions?.accessibility === 'unsupported' && (
-                    <p className="mt-4 text-sm text-neutral-500">
-                      Bu platform için Accessibility izni gerekli değil.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Step 3: API Keys */}
-              {step === 3 && (
-                <div className="animate-fade-in">
-                  <h2 className="text-2xl font-semibold tracking-tight">API anahtarları</h2>
-                  <p className="mt-4 text-sm leading-7 text-neutral-400">
-                    Senin adına Groq ve Qwen kullanarak çalışıyorum. Anahtarlar sadece senin
-                    bilgisayarında, şifreli saklanır.
-                  </p>
-                  <div className="mt-6 grid gap-4">
-                    <label className="grid gap-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-neutral-300">Groq API Key</span>
-                        <a
-                          href="https://console.groq.com"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-emerald-400/60 transition hover:text-emerald-400"
-                        >
-                          Anahtarını al →
-                        </a>
-                      </div>
-                      <input
-                        type="password"
-                        value={settings.groqApiKey}
-                        placeholder="gsk_..."
-                        className="h-11 rounded-lg border border-neutral-700 bg-neutral-950 px-4 text-sm text-neutral-100 outline-none transition focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/20"
-                        onChange={(event) =>
-                          setSettings((current) => ({ ...current, groqApiKey: event.target.value }))
-                        }
-                      />
-                    </label>
-                    <label className="grid gap-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-neutral-300">DashScope API Key</span>
-                        <a
-                          href="https://dashscope.console.aliyun.com"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-emerald-400/60 transition hover:text-emerald-400"
-                        >
-                          Anahtarını al →
-                        </a>
-                      </div>
-                      <input
-                        type="password"
-                        value={settings.dashscopeApiKey}
-                        placeholder="sk-..."
-                        className="h-11 rounded-lg border border-neutral-700 bg-neutral-950 px-4 text-sm text-neutral-100 outline-none transition focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/20"
-                        onChange={(event) =>
-                          setSettings((current) => ({
-                            ...current,
-                            dashscopeApiKey: event.target.value
-                          }))
-                        }
-                      />
-                    </label>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 4: Hotkey */}
-              {step === 4 && (
-                <OnboardingHotkeyStep
-                  hotkeyKeyCode={settings.hotkeyKeyCode}
-                  onChange={(hotkeyKeyCode) =>
-                    setSettings((current) => ({ ...current, hotkeyKeyCode }))
-                  }
-                />
-              )}
-
-              {/* Step 5: Test */}
-              {step === 5 && (
-                <div className="animate-fade-in">
-                  <h2 className="text-2xl font-semibold tracking-tight">İlk dikteni yap</h2>
-                  <p className="mt-4 text-sm leading-7 text-neutral-400">
-                    Her şey hazır! Kurulumu tamamladıktan sonra bir metin alanına odaklanıp seçtiğin
-                    hotkey'i basılı tutarak kısa bir test yap.
-                  </p>
-                  <div className="mt-6 rounded-lg border border-neutral-800/40 bg-neutral-950/50 p-5">
-                    <p className="text-sm font-medium text-neutral-300">Önerilen test:</p>
-                    <p className="mt-2 text-sm italic text-neutral-500">
-                      "Merhaba dünya, bugün hava çok güzel."
-                    </p>
-                  </div>
-                  <div className="mt-6">
-                    <MicLevelMeter isActive deviceId={settings.microphoneDeviceId || undefined} />
-                  </div>
-                  {status && <p className="mt-4 text-sm text-red-400">{status}</p>}
-                </div>
-              )}
+            <MicLevelMeter isActive deviceId={settings.microphoneDeviceId || undefined} />
+            <div className="mt-4 flex items-center justify-between text-sm">
+              <span className="font-medium text-sd-text">Varsayılan mikrofon</span>
+              <span className="font-mono text-xs font-semibold text-sd-accent">-12 dB</span>
             </div>
           </div>
-
-          {/* Footer navigation */}
-          <div className="flex items-center justify-between border-t border-neutral-800/40 px-8 py-5">
+          <div className="w-[220px] rounded-sdLg border-2 border-dashed border-sd-accent bg-sd-muted p-5">
+            <div className="mb-3 grid h-12 w-12 place-items-center rounded-xl bg-sd-hover text-sd-accent">
+              🎙
+            </div>
+            <p className="text-sm font-semibold text-sd-text">Mikrofon erişimi</p>
+            <p className="mt-1 text-xs leading-5 text-sd-dim">
+              SesliDikte mikrofonunu kullanmak istiyor.
+            </p>
             <button
               type="button"
-              disabled={step === 0}
-              className="h-10 rounded-lg border border-neutral-700 px-5 text-sm text-neutral-300 transition hover:border-neutral-500 disabled:cursor-not-allowed disabled:opacity-30"
-              onClick={() => setStep((current) => Math.max(0, current - 1))}
+              className="sd-cta mt-4 h-9 w-full text-xs font-semibold"
+              onClick={() => void requestMicrophone()}
             >
-              ← Geri
+              İzin ver
             </button>
-            {step < STEPS.length - 1 ? (
-              <button
-                type="button"
-                disabled={step === 3 && !canContinueApi}
-                className="h-10 rounded-lg bg-emerald-400 px-6 text-sm font-medium text-neutral-950 transition hover:bg-emerald-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
-                onClick={() => setStep((current) => Math.min(STEPS.length - 1, current + 1))}
-              >
-                Devam →
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="h-10 rounded-lg bg-emerald-400 px-6 text-sm font-medium text-neutral-950 transition hover:bg-emerald-300 active:scale-[0.98]"
-                onClick={() => void finish()}
-              >
-                ✓ Tamamla
-              </button>
-            )}
+            <p className={`mt-3 text-xs font-medium ${micPermission.color}`}>
+              {micPermission.text}
+            </p>
           </div>
         </div>
-      </section>
-    </main>
+      </StepShell>
+    )
+  }
+
+  if (step === 2) {
+    return (
+      <StepShell
+        {...shellProps}
+        title="Erişilebilirlik iznini aç"
+        subtitle="Metni aktif uygulamaya yazabilmek için. SesliDikte sadece sen konuştuktan sonra yazma izni kullanır."
+        hint="Bu izin sistem geneli text injection için zorunludur."
+      >
+        <div className="flex h-full items-center gap-7">
+          <div className="sd-panel flex-1 overflow-hidden bg-sd-solid">
+            <div className="border-b border-sd-border bg-sd-muted px-4 py-2 text-xs font-semibold text-sd-text">
+              Gizlilik & Güvenlik · Erişilebilirlik
+            </div>
+            <div className="space-y-1 p-3">
+              {[
+                ['Raycast', true],
+                ['SesliDikte', true],
+                ['1Password', true],
+                ['Karabiner', false]
+              ].map(([name, on]) => {
+                const active = name === 'SesliDikte'
+                return (
+                  <div
+                    key={String(name)}
+                    className={`flex items-center gap-2.5 rounded-md px-2 py-2 ${
+                      active ? 'outline outline-1 outline-sd-accent' : ''
+                    }`}
+                    style={
+                      active ? { background: 'rgba(var(--sd-accent-glow-rgb), 0.15)' } : undefined
+                    }
+                  >
+                    <span
+                      className={`grid h-[22px] w-[22px] place-items-center rounded text-[10px] font-bold ${
+                        active ? 'bg-sd-accent text-white' : 'bg-sd-hover text-sd-dim'
+                      }`}
+                    >
+                      {String(name)[0]}
+                    </span>
+                    <span className="flex-1 text-[13px] font-medium text-sd-text">{name}</span>
+                    <ToggleMock on={Boolean(on)} />
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+          <div className="sd-panel w-60 p-5">
+            <p className="text-2xl text-sd-accent">⌾</p>
+            <p className="mt-3 text-sm font-semibold text-sd-text">Neden bu izin?</p>
+            <p className="mt-1 text-xs leading-5 text-sd-dim">
+              Konuştuğun metni Slack, Mail, VS Code gibi aktif pencereye yapıştırabilmek için.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                className="sd-cta h-9 px-3 text-xs font-semibold"
+                onClick={() => void window.api.permissions.openAccessibilitySettings()}
+              >
+                Ayarları aç
+              </button>
+              <button
+                type="button"
+                className="rounded-sdMd border border-sd-border px-3 text-xs text-sd-dim"
+                onClick={() => void refreshPermissions()}
+              >
+                Kontrol et
+              </button>
+            </div>
+            <p className={`mt-3 text-xs font-medium ${accPermission.color}`}>
+              {accPermission.text}
+            </p>
+          </div>
+        </div>
+      </StepShell>
+    )
+  }
+
+  if (step === 3) {
+    return (
+      <StepShell
+        {...shellProps}
+        title="API bağlantısını hazırla"
+        subtitle="MVP döneminde Groq ve DashScope anahtarları yerel ayarlarda saklanır. Production sürümünde bu anahtarlar backend'de yönetilecek."
+        hint="Son kullanıcı sürümünde bu ekran geliştirici modu dışında gösterilmeyecek."
+      >
+        <div className="grid h-full content-center gap-4">
+          <label className="grid gap-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-sd-text">Groq API Key</span>
+              <a
+                href="https://console.groq.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-sd-accent"
+              >
+                Anahtar al →
+              </a>
+            </div>
+            <input
+              type="password"
+              value={settings.groqApiKey}
+              aria-label="Groq API Key"
+              className="sd-input px-4"
+              autoComplete="off"
+              placeholder="gsk_..."
+              onChange={(event) =>
+                setSettings((current) => ({ ...current, groqApiKey: event.target.value }))
+              }
+            />
+            <p className="text-xs leading-5 text-sd-faint">
+              Groq Whisper ses transkripsiyonu için kullanılır. Şimdilik boş geçebilirsin; ilk
+              dikteden önce Settings'ten eklemek gerekir.
+            </p>
+          </label>
+
+          <label className="grid gap-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-sd-text">DashScope API Key</span>
+              <a
+                href="https://dashscope.console.aliyun.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-sd-accent"
+              >
+                Anahtar al →
+              </a>
+            </div>
+            <input
+              type="password"
+              value={settings.dashscopeApiKey}
+              aria-label="DashScope API Key"
+              className="sd-input px-4"
+              autoComplete="off"
+              placeholder="sk-..."
+              onChange={(event) =>
+                setSettings((current) => ({ ...current, dashscopeApiKey: event.target.value }))
+              }
+            />
+            <p className="text-xs leading-5 text-sd-faint">
+              AI temizleme için kullanılır. Boş kalırsa dikte ham transkript olarak devam eder.
+            </p>
+          </label>
+
+          <div className="rounded-sdMd border border-sd-border bg-sd-muted p-4 text-xs leading-5 text-sd-dim">
+            Production mimarisi farklı olacak: Electron uygulaması anahtar taşımaz; istekler DoDo
+            backend üzerinden Groq/DashScope'a gider.
+          </div>
+        </div>
+      </StepShell>
+    )
+  }
+
+  if (step === 4) {
+    return (
+      <StepShell
+        {...shellProps}
+        title="Kısayolunu seç"
+        subtitle="Konuşmak için basılı tutacağın tuş. macOS'ta Fn varsayılan; istersen kendi kombinasyonun."
+      >
+        <div className="flex flex-col gap-5">
+          <div className="sd-panel flex justify-center gap-1.5 rounded-sdXl p-6">
+            {['⌃', '⌥', '⌘', 'space', '⌘', '⌥', getHotkeyShortLabel(settings.hotkeyKeyCode)].map(
+              (key, index) => (
+                <span
+                  key={`${key}-${index}`}
+                  className={`grid h-11 place-items-center rounded-sdMd border border-sd-border text-[13px] font-semibold ${
+                    index === 6
+                      ? 'bg-sd-accent px-4 text-white shadow-sdGlow'
+                      : 'bg-sd-solid text-sd-text'
+                  } ${key === 'space' ? 'w-[140px]' : 'w-11'}`}
+                >
+                  {key}
+                </span>
+              )
+            )}
+          </div>
+          <HotkeyRecorder
+            value={settings.hotkeyKeyCode}
+            onChange={(hotkeyKeyCode) => setSettings((current) => ({ ...current, hotkeyKeyCode }))}
+          />
+        </div>
+      </StepShell>
+    )
+  }
+
+  return (
+    <StepShell
+      {...shellProps}
+      cta="Bitir & Başla"
+      title="Dene — sonra hazırsın"
+      subtitle="Aşağıdaki kutuya tıkla, kısayoluna basılı tut, bir şey söyle ve bırak."
+    >
+      <div className="flex h-full flex-col gap-4">
+        <div className="relative min-h-0 flex-1 rounded-sdLg border border-dashed border-sd-accent bg-sd-muted p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-sd-accent">
+            Deneme alanı
+          </p>
+          <p className="mt-3 text-sm leading-6 text-sd-text">
+            Toplantıya geldim, deadline yarın. Slide'ları akşam toparlarım.
+            <span className="ml-1 inline-block h-3.5 w-px animate-pulse bg-sd-accent align-middle" />
+          </p>
+          <div className="absolute bottom-4 left-1/2 flex h-[26px] -translate-x-1/2 items-center gap-2 rounded-sdPill border border-white/10 bg-[#1c1c1e] px-3 text-[11.5px] font-medium text-white shadow-sdSoft">
+            <span className="h-1.5 w-1.5 rounded-full bg-sd-accent" />
+            Dinleniyor · 0:04
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            ['🎯', 'Doğal konuş', 'Dolgu kelimeleri otomatik temizlenir'],
+            ['⚡', 'Hızlı', 'Konuşma sonu → metin görünmesi < 2 saniye'],
+            ['🔒', 'KVKK', 'Anahtarlar yerel olarak şifreli saklanır']
+          ].map(([icon, title, desc]) => (
+            <div key={title} className="sd-panel p-3">
+              <p className="text-base">{icon}</p>
+              <p className="mt-1 text-[12.5px] font-semibold text-sd-text">{title}</p>
+              <p className="mt-0.5 text-[11.5px] leading-4 text-sd-dim">{desc}</p>
+            </div>
+          ))}
+        </div>
+        {status && <p className="text-sm text-red-400">{status}</p>}
+      </div>
+    </StepShell>
   )
 }

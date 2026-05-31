@@ -41,10 +41,10 @@ export const tr: Translations = {
     },
     ai: {
       title: 'AI Ayarları',
-      subtitle: 'Metin temizleme modeli ve davranışı',
+      subtitle: 'Metin temizleme davranışı',
       llmEnabled: 'LLM temizleme',
       llmEnabledDesc: 'Kapalıyken ham transkript yapıştırılır',
-      model: 'Qwen Model',
+      model: 'Temizleme modeli',
       cleaningMode: 'Temizleme modu',
       temperature: 'Temperature',
       temperatureMin: 'Kesin',

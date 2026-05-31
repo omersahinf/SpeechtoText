@@ -58,7 +58,7 @@ export function HotkeyRecorder({ value, onChange }: HotkeyRecorderProps): ReactE
     <div className="space-y-3">
       <button
         type="button"
-        className="flex h-11 w-full items-center justify-between rounded-md border border-neutral-700 bg-neutral-900 px-3 text-left text-sm text-neutral-100 outline-none transition hover:border-emerald-500 focus:border-emerald-400"
+        className="flex h-11 w-full items-center justify-between rounded-md border border-neutral-700 bg-neutral-900 px-3 text-left text-sm text-neutral-100 outline-none transition hover:border-sd-accent focus:border-sd-accent"
         onKeyDown={(event) => {
           const keyCode = mapDomEventToUiohookKeyCode(event)
           if (keyCode) {
@@ -78,7 +78,7 @@ export function HotkeyRecorder({ value, onChange }: HotkeyRecorderProps): ReactE
             type="button"
             className={`rounded-md border px-3 py-2 text-xs transition ${
               value === option.keyCode
-                ? 'border-emerald-400 bg-emerald-400 text-neutral-950'
+                ? 'border-sd-accent bg-sd-accent text-neutral-950'
                 : 'border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-neutral-500'
             }`}
             onClick={() => onChange(option.keyCode)}
@@ -93,12 +93,12 @@ export function HotkeyRecorder({ value, onChange }: HotkeyRecorderProps): ReactE
           type="button"
           onClick={startTest}
           disabled={testState === 'listening'}
-          className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-neutral-200 transition hover:border-emerald-400 disabled:opacity-60"
+          className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-neutral-200 transition hover:border-sd-accent disabled:opacity-60"
         >
           {testState === 'listening' ? 'Kısayola bas…' : 'Şimdi dene'}
         </button>
         {testState === 'detected' && (
-          <span className="text-xs text-emerald-400" role="status">
+          <span className="text-xs text-sd-accent" role="status">
             ✓ Algılandı
           </span>
         )}

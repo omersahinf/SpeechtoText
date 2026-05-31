@@ -1,118 +1,676 @@
-import { type ReactElement } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties, type ReactElement } from 'react'
+import type { AppSettings, CustomVocabEntry } from '@/shared/types'
 import { useSettings } from '@/renderer/hooks/useSettings'
-import { GeneralTab } from './settings/tabs/GeneralTab'
+import { applyAppearance, buildAppearanceTheme } from '@/renderer/styles/tokens'
+import { ApiKeysTab, AppearanceTab, BehaviorTab } from './settings/tabs/GeneralTab'
 import { KeyboardTab } from './settings/tabs/KeyboardTab'
-import { AITab } from './settings/tabs/AITab'
 import { MicrophoneTab } from './settings/tabs/MicrophoneTab'
 import { PermissionsTab } from './settings/tabs/PermissionsTab'
 import { SnippetsTab } from './settings/tabs/SnippetsTab'
-import { ProfilesTab } from './settings/tabs/ProfilesTab'
 import { HistoryTab } from './settings/tabs/HistoryTab'
 import { AboutTab } from './settings/tabs/AboutTab'
-import { useState } from 'react'
-import type { AppSettings } from '@/shared/types'
 
 type SettingsTab =
-  | 'general'
+  | 'api'
+  | 'appearance'
+  | 'behavior'
+  | 'microphone'
   | 'keyboard'
   | 'ai'
-  | 'microphone'
-  | 'permissions'
+  | 'sozluk'
   | 'snippets'
-  | 'profiles'
   | 'history'
+  | 'permissions'
   | 'about'
 
 const TABS: { id: SettingsTab; label: string; icon: string }[] = [
-  { id: 'general', label: 'Genel', icon: '⚙' },
-  { id: 'keyboard', label: 'Klavye', icon: '⌨' },
-  { id: 'ai', label: 'AI', icon: '✦' },
+  { id: 'api', label: 'API Anahtarları', icon: '🔑' },
+  { id: 'appearance', label: 'Görünüm', icon: '◐' },
+  { id: 'behavior', label: 'Davranış', icon: '⚙' },
   { id: 'microphone', label: 'Mikrofon', icon: '🎙' },
-  { id: 'permissions', label: 'Gizlilik ve İzinler', icon: '🔒' },
-  { id: 'snippets', label: 'Snippets', icon: '⚡' },
-  { id: 'profiles', label: 'Profiller', icon: '👤' },
-  { id: 'history', label: 'Geçmiş', icon: '🕒' },
-  { id: 'about', label: 'Hakkında', icon: 'ℹ' }
+  { id: 'keyboard', label: 'Kısayol', icon: '⌨' },
+  { id: 'ai', label: 'AI Temizleme', icon: '✨' },
+  { id: 'sozluk', label: 'Sözlük', icon: '📖' },
+  { id: 'snippets', label: 'Snippets', icon: '📚' },
+  { id: 'history', label: 'Geçmiş', icon: '🕘' },
+  { id: 'permissions', label: 'İzinler', icon: '🔒' },
+  { id: 'about', label: 'Hakkında', icon: 'ⓘ' }
 ]
 
-const TABS_WITH_SAVE: SettingsTab[] = ['general', 'keyboard', 'ai', 'microphone']
+const SAVE_TABS: SettingsTab[] = ['api', 'appearance', 'behavior', 'microphone', 'keyboard', 'ai']
+
+function Toggle({ checked }: { checked: boolean }): ReactElement {
+  return (
+    <span
+      style={{
+        width: 32,
+        height: 18,
+        borderRadius: 999,
+        position: 'relative',
+        background: checked ? 'var(--sd-accent-hero)' : 'var(--sd-surface-3)',
+        flex: '0 0 auto'
+      }}
+      aria-hidden="true"
+    >
+      <span
+        style={{
+          position: 'absolute',
+          top: 2,
+          left: checked ? 16 : 2,
+          width: 14,
+          height: 14,
+          borderRadius: 999,
+          background: '#fff',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.25)'
+        }}
+      />
+    </span>
+  )
+}
+
+function SettingsAiSection({
+  settings,
+  onChange
+}: {
+  settings: AppSettings
+  onChange: (patch: Partial<AppSettings>) => void
+}): ReactElement {
+  const theme = buildAppearanceTheme(settings)
+  const a = theme.accent
+  const m = theme.mode
+  const rowStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    padding: '12px 16px',
+    borderBottom: `1px solid ${m.border}`
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 22, color: m.text }}>
+      <div>
+        <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>AI Temizleme</div>
+        <div style={{ fontSize: 13, color: m.textDim, marginTop: 6 }}>
+          Türkçe konuşmanı dolgu kelimelerden arındır, kod-switching'i koru.
+        </div>
+      </div>
+
+      <div
+        style={{
+          borderRadius: theme.radius.lg,
+          overflow: 'hidden',
+          border: `1px solid ${m.border}`,
+          background: m.surface2
+        }}
+      >
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+          <div style={{ padding: 16, borderRight: `1px solid ${m.border}` }}>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                color: m.textFaint,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                marginBottom: 8
+              }}
+            >
+              Ham
+            </div>
+            <div
+              style={{
+                fontSize: 13,
+                lineHeight: 1.55,
+                color: m.textDim,
+                fontFamily: 'ui-monospace, monospace'
+              }}
+            >
+              "<span style={{ color: m.textFaint }}>şey</span> yani{' '}
+              <span style={{ color: m.textFaint }}>yaa</span> meeting'e geldim{' '}
+              <span style={{ color: m.textFaint }}>hani</span> deadline yarın{' '}
+              <span style={{ color: m.textFaint }}>abi</span> slide'ları akşam toparlarım"
+            </div>
+          </div>
+          <div style={{ padding: 16, position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: a.hero,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase'
+                }}
+              >
+                Temizlenmiş
+              </span>
+              <svg width="11" height="11" viewBox="0 0 12 12" fill={a.hero} aria-hidden="true">
+                <path d="M6 1L7 4.5L10.5 5.5L7 6.5L6 10L5 6.5L1.5 5.5L5 4.5Z" />
+              </svg>
+            </div>
+            <div style={{ fontSize: 13.5, lineHeight: 1.55, color: m.text, fontWeight: 450 }}>
+              "Meeting'e geldim, deadline yarın. Slide'ları akşam toparlarım."
+            </div>
+          </div>
+        </div>
+        <div
+          style={{
+            padding: '10px 16px',
+            background: m.surface3,
+            fontSize: 11,
+            color: m.textDim,
+            display: 'flex',
+            gap: 14
+          }}
+        >
+          <span>⏱ 1.4s</span>
+          <span>🧹 4 dolgu kelime</span>
+          <span>🌐 kod-switching korundu</span>
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: theme.radius.lg,
+          border: `1px solid ${m.border}`,
+          overflow: 'hidden',
+          background: m.surface2
+        }}
+      >
+        {[
+          {
+            label: 'Dolgu kelime temizliği',
+            desc: 'şey, yaa, hani, abi, ee gibi',
+            checked: settings.llmEnabled,
+            patch: { llmEnabled: !settings.llmEnabled }
+          },
+          {
+            label: 'Noktalama düzeltmesi',
+            desc: 'Virgül, soru eki (mı/mi/mu/mü), nokta',
+            checked: settings.llmMode === 'conservative',
+            patch: {
+              llmMode: settings.llmMode === 'conservative' ? 'standard' : 'conservative'
+            } satisfies Partial<AppSettings>
+          },
+          {
+            label: 'Kod-switching koru',
+            desc: 'İngilizce kelimeler kapital kalır',
+            checked: settings.appContextEnabled,
+            patch: { appContextEnabled: !settings.appContextEnabled }
+          },
+          {
+            label: 'Argo temizliği',
+            desc: 'Resmi yazışmalar için',
+            checked: settings.transformMode === 'polish',
+            patch: {
+              transformMode: settings.transformMode === 'polish' ? 'raw' : 'polish'
+            } satisfies Partial<AppSettings>
+          }
+        ].map((row, index, rows) => (
+          <button
+            key={row.label}
+            type="button"
+            style={{
+              ...rowStyle,
+              borderBottom: index < rows.length - 1 ? rowStyle.borderBottom : 0
+            }}
+            onClick={() => onChange(row.patch as Partial<AppSettings>)}
+          >
+            <span style={{ flex: 1, textAlign: 'left' }}>
+              <span style={{ display: 'block', fontSize: 13.5, fontWeight: 500, color: m.text }}>
+                {row.label}
+              </span>
+              <span style={{ display: 'block', fontSize: 11.5, color: m.textDim, marginTop: 1 }}>
+                {row.desc}
+              </span>
+            </span>
+            <Toggle checked={row.checked} />
+          </button>
+        ))}
+      </div>
+
+      <div
+        style={{
+          borderRadius: theme.radius.md,
+          border: `1px solid ${m.border}`,
+          background: m.surface2,
+          padding: 12,
+          color: m.textDim,
+          fontSize: 12,
+          lineHeight: 1.45
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: a.hero,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            marginBottom: 6
+          }}
+        >
+          Gerçek pipeline
+        </div>
+        Konuşmayı metne çevirme Groq Whisper Large v3 ile yapılır. AI temizleme açıksa metin
+        temizleme katmanı çalışır; kapalıysa ham transkript doğrudan kullanılır.
+      </div>
+    </div>
+  )
+}
+
+function SozlukSection({ settings }: { settings: AppSettings }): ReactElement {
+  const theme = buildAppearanceTheme(settings)
+  const a = theme.accent
+  const m = theme.mode
+
+  const [vocabList, setVocabList] = useState<CustomVocabEntry[]>([])
+  const [newTerm, setNewTerm] = useState('')
+  const [newReplacement, setNewReplacement] = useState('')
+
+  useEffect(() => {
+    void window.api.customVocab
+      .getAll()
+      .then(setVocabList)
+      .catch(() => {})
+  }, [])
+
+  async function addVocab(): Promise<void> {
+    if (!newTerm.trim() || !newReplacement.trim()) return
+    try {
+      const entry = await window.api.customVocab.add(newTerm.trim(), newReplacement.trim())
+      setVocabList((prev) => [...prev, entry])
+      setNewTerm('')
+      setNewReplacement('')
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function deleteVocab(id: string): Promise<void> {
+    try {
+      await window.api.customVocab.delete(id)
+      setVocabList((prev) => prev.filter((v) => v.id !== id))
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 22, color: m.text }}>
+      <div>
+        <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>Sözlük</div>
+        <div style={{ fontSize: 13, color: m.textDim, marginTop: 6 }}>
+          Yanlış duyulan veya yazılan kelimeleri otomatik düzelt. Eklediğin terimler her diktede
+          uygulanır.
+        </div>
+      </div>
+
+      {/* Nasıl çalışır */}
+      <div
+        style={{
+          borderRadius: theme.radius.lg,
+          overflow: 'hidden',
+          border: `1px solid ${m.border}`,
+          background: m.surface2
+        }}
+      >
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+          <div style={{ padding: 16, borderRight: `1px solid ${m.border}` }}>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                color: m.textFaint,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                marginBottom: 8
+              }}
+            >
+              Duyulan
+            </div>
+            <div
+              style={{
+                fontSize: 13,
+                lineHeight: 1.55,
+                color: m.textDim,
+                fontFamily: 'ui-monospace, monospace'
+              }}
+            >
+              "...sonra{' '}
+              <span style={{ color: '#fb7185', textDecoration: 'line-through' }}>cloud</span>'a
+              sordum..."
+            </div>
+          </div>
+          <div style={{ padding: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: a.hero,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase'
+                }}
+              >
+                Düzeltilmiş
+              </span>
+              <svg width="11" height="11" viewBox="0 0 12 12" fill={a.hero} aria-hidden="true">
+                <path d="M6 1L7 4.5L10.5 5.5L7 6.5L6 10L5 6.5L1.5 5.5L5 4.5Z" />
+              </svg>
+            </div>
+            <div style={{ fontSize: 13.5, lineHeight: 1.55, color: m.text, fontWeight: 450 }}>
+              "...sonra <span style={{ color: a.hero }}>Claude</span>'a sordum..."
+            </div>
+          </div>
+        </div>
+        <div
+          style={{
+            padding: '10px 16px',
+            background: m.surface3,
+            fontSize: 11,
+            color: m.textDim,
+            display: 'flex',
+            gap: 14
+          }}
+        >
+          <span>📖 Özel sözlük eşleşmesi</span>
+          <span>🔄 Her diktede otomatik uygulanır</span>
+        </div>
+      </div>
+
+      {/* Terim ekleme */}
+      <div
+        style={{
+          borderRadius: theme.radius.lg,
+          border: `1px solid ${m.border}`,
+          background: m.surface2,
+          padding: 20,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16
+        }}
+      >
+        <div style={{ fontSize: 14, fontWeight: 600, color: m.text }}>Yeni terim ekle</div>
+
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input
+            type="text"
+            value={newTerm}
+            aria-label="Yeni terim"
+            placeholder="Duyulan (örn: cloud)"
+            style={{
+              flex: 1,
+              height: 40,
+              borderRadius: theme.radius.sm,
+              border: `1px solid ${m.border}`,
+              background: m.bg,
+              padding: '0 12px',
+              fontSize: 13,
+              color: m.text,
+              outline: 'none'
+            }}
+            onChange={(e) => setNewTerm(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && void addVocab()}
+          />
+          <span style={{ color: m.textFaint, fontSize: 16, fontWeight: 600 }}>→</span>
+          <input
+            type="text"
+            value={newReplacement}
+            aria-label="Yazılacak şekli"
+            placeholder="Yazılacak (örn: Claude)"
+            style={{
+              flex: 1,
+              height: 40,
+              borderRadius: theme.radius.sm,
+              border: `1px solid ${m.border}`,
+              background: m.bg,
+              padding: '0 12px',
+              fontSize: 13,
+              color: m.text,
+              outline: 'none'
+            }}
+            onChange={(e) => setNewReplacement(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && void addVocab()}
+          />
+          <button
+            type="button"
+            disabled={!newTerm.trim() || !newReplacement.trim()}
+            style={{
+              height: 40,
+              borderRadius: theme.radius.sm,
+              border: 0,
+              background: a.hero,
+              color: '#fff',
+              padding: '0 20px',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: !newTerm.trim() || !newReplacement.trim() ? 'not-allowed' : 'pointer',
+              opacity: !newTerm.trim() || !newReplacement.trim() ? 0.4 : 1,
+              boxShadow: `0 2px 8px rgba(${a.glowRgb}, 0.25)`
+            }}
+            onClick={() => void addVocab()}
+          >
+            Ekle
+          </button>
+        </div>
+      </div>
+
+      {/* Terim listesi */}
+      <div
+        style={{
+          borderRadius: theme.radius.lg,
+          border: `1px solid ${m.border}`,
+          background: m.surface2,
+          padding: 20,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: m.text }}>Kayıtlı terimler</div>
+          <div style={{ fontSize: 12, color: m.textFaint }}>{vocabList.length} terim</div>
+        </div>
+
+        {vocabList.length === 0 ? (
+          <div
+            style={{
+              padding: '24px 0',
+              textAlign: 'center',
+              fontSize: 13,
+              color: m.textFaint
+            }}
+          >
+            Henüz özel terim yok. Yukarıdan bir tane ekleyerek başla.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {vocabList.map((v) => (
+              <div
+                key={v.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  borderRadius: theme.radius.sm,
+                  border: `1px solid ${m.border}`,
+                  background: m.bg,
+                  padding: '10px 14px',
+                  fontSize: 13
+                }}
+              >
+                <span
+                  style={{
+                    flex: 1,
+                    color: m.textDim,
+                    fontFamily: 'ui-monospace, monospace'
+                  }}
+                >
+                  {v.term}
+                </span>
+                <span style={{ color: a.hero, fontSize: 14 }}>→</span>
+                <span
+                  style={{
+                    flex: 1,
+                    color: m.text,
+                    fontWeight: 500,
+                    fontFamily: 'ui-monospace, monospace'
+                  }}
+                >
+                  {v.replacement}
+                </span>
+                <button
+                  type="button"
+                  aria-label={`"${v.term}" terimini sil`}
+                  style={{
+                    border: 0,
+                    background: 'transparent',
+                    color: '#fb7185',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    padding: '4px 8px',
+                    borderRadius: 4
+                  }}
+                  onClick={() => void deleteVocab(v.id)}
+                >
+                  Sil
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export default function Settings(): ReactElement {
   const { settings, setSettings, isSaving, status, saveSettings, canSave } = useSettings()
-  const [activeTab, setActiveTab] = useState<SettingsTab>('general')
+  const [activeTab, setActiveTab] = useState<SettingsTab>('api')
+  const theme = useMemo(() => buildAppearanceTheme(settings), [settings])
+  const m = theme.mode
+  const a = theme.accent
+
+  useEffect(() => {
+    applyAppearance(settings)
+  }, [settings])
 
   const handleChange = (patch: Partial<AppSettings>): void => {
     setSettings((prev) => ({ ...prev, ...patch }))
   }
 
-  const showSaveBar = TABS_WITH_SAVE.includes(activeTab)
+  const showSaveBar = SAVE_TABS.includes(activeTab)
+
+  const shellStyle: CSSProperties = {
+    minHeight: '100vh',
+    background: m.bg,
+    color: m.text,
+    font: `14px ${theme.font}`
+  }
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-neutral-100">
-      <section className="mx-auto grid min-h-screen w-full max-w-6xl grid-cols-[220px_1fr] gap-0 max-lg:grid-cols-1">
-        {/* Sidebar */}
-        <aside className="border-r border-neutral-800/50 px-4 py-8" aria-label="Ayarlar menüsü">
-          <div className="mb-8">
-            <p className="text-xs font-medium uppercase tracking-wider text-emerald-400">
-              Sesli Dikte
-            </p>
-            <h1 className="mt-2 text-xl font-semibold tracking-tight">Ayarlar</h1>
+    <main style={shellStyle}>
+      <section
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '220px 1fr',
+          minHeight: '100vh',
+          color: m.text
+        }}
+      >
+        <aside
+          aria-label="Ayarlar menüsü"
+          style={{
+            background: m.surface2,
+            borderRight: `1px solid ${m.border}`,
+            padding: '14px 8px',
+            overflowY: 'auto'
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              color: m.textFaint,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              padding: '4px 10px 8px'
+            }}
+          >
+            Ayarlar
           </div>
-          <nav className="space-y-1" aria-label="Ayar sekmeleri">
-            {TABS.map((tab) => (
+          {TABS.map((tab) => {
+            const selected = activeTab === tab.id
+            return (
               <button
                 key={tab.id}
                 type="button"
                 role="tab"
-                aria-selected={activeTab === tab.id}
-                aria-controls={`tabpanel-${tab.id}`}
-                className={`flex h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
-                  activeTab === tab.id
-                    ? 'bg-emerald-400/10 text-emerald-300 font-medium'
-                    : 'text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200'
-                }`}
+                aria-selected={selected}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  width: '100%',
+                  padding: '7px 10px',
+                  border: 0,
+                  borderRadius: theme.radius.sm + 2,
+                  background: selected ? a.hero : 'transparent',
+                  color: selected ? '#fff' : m.textDim,
+                  fontSize: 13,
+                  fontWeight: selected ? 600 : 500,
+                  cursor: 'pointer',
+                  marginBottom: 2,
+                  textAlign: 'left'
+                }}
                 onClick={() => setActiveTab(tab.id)}
               >
-                <span className="w-5 text-center text-base" aria-hidden>
+                <span style={{ fontSize: 14, width: 18 }} aria-hidden="true">
                   {tab.icon}
                 </span>
                 {tab.label}
               </button>
-            ))}
-          </nav>
+            )
+          })}
         </aside>
 
-        {/* Content */}
-        <div className="flex flex-col px-8 py-8">
-          <div
-            id={`tabpanel-${activeTab}`}
-            role="tabpanel"
-            aria-label={TABS.find((t) => t.id === activeTab)?.label}
-            className="flex-1 space-y-6"
-          >
-            {activeTab === 'general' && <GeneralTab settings={settings} onChange={handleChange} />}
-            {activeTab === 'keyboard' && (
-              <KeyboardTab settings={settings} onChange={handleChange} />
-            )}
-            {activeTab === 'ai' && <AITab settings={settings} onChange={handleChange} />}
-            {activeTab === 'microphone' && (
-              <MicrophoneTab settings={settings} onChange={handleChange} />
-            )}
-            {activeTab === 'permissions' && <PermissionsTab />}
-            {activeTab === 'snippets' && <SnippetsTab />}
-            {activeTab === 'profiles' && <ProfilesTab />}
-            {activeTab === 'history' && <HistoryTab />}
-            {activeTab === 'about' && <AboutTab />}
-          </div>
+        <div style={{ padding: 32, overflowY: 'auto', background: m.bg }}>
+          {activeTab === 'ai' && <SettingsAiSection settings={settings} onChange={handleChange} />}
+          {activeTab === 'sozluk' && <SozlukSection settings={settings} />}
+          {activeTab === 'api' && <ApiKeysTab settings={settings} onChange={handleChange} />}
+          {activeTab === 'appearance' && (
+            <AppearanceTab settings={settings} onChange={handleChange} />
+          )}
+          {activeTab === 'behavior' && <BehaviorTab settings={settings} onChange={handleChange} />}
+          {activeTab === 'keyboard' && <KeyboardTab settings={settings} onChange={handleChange} />}
+          {activeTab === 'microphone' && (
+            <MicrophoneTab settings={settings} onChange={handleChange} />
+          )}
+          {activeTab === 'permissions' && <PermissionsTab />}
+          {activeTab === 'snippets' && <SnippetsTab />}
+          {activeTab === 'history' && <HistoryTab />}
+          {activeTab === 'about' && <AboutTab />}
 
-          {/* Save bar — only for tabs that touch AppSettings */}
           {showSaveBar && (
-            <div className="flex items-center justify-end gap-3 border-t border-neutral-800/30 pt-6 mt-8">
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: 12,
+                borderTop: `1px solid ${m.border}`,
+                paddingTop: 24,
+                marginTop: 32
+              }}
+            >
               {status && (
                 <span
                   role={status === 'Kaydedildi.' ? 'status' : 'alert'}
                   aria-live={status === 'Kaydedildi.' ? 'polite' : 'assertive'}
-                  className={`text-sm ${status === 'Kaydedildi.' ? 'text-emerald-400' : 'text-red-400'}`}
+                  style={{ color: status === 'Kaydedildi.' ? a.hero : '#fb7185', fontSize: 13 }}
                 >
                   {status}
                 </span>
@@ -120,7 +678,19 @@ export default function Settings(): ReactElement {
               <button
                 type="button"
                 disabled={!canSave || isSaving}
-                className="h-10 rounded-lg bg-emerald-400 px-6 text-sm font-medium text-neutral-950 transition hover:bg-emerald-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                style={{
+                  height: 40,
+                  border: 0,
+                  borderRadius: theme.radius.md,
+                  padding: '0 24px',
+                  background: a.hero,
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: !canSave || isSaving ? 'not-allowed' : 'pointer',
+                  opacity: !canSave || isSaving ? 0.5 : 1,
+                  boxShadow: `0 4px 14px rgba(${a.glowRgb}, 0.32)`
+                }}
                 onClick={() => void saveSettings()}
               >
                 {isSaving ? 'Kaydediliyor...' : 'Kaydet'}

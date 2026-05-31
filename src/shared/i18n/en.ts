@@ -41,10 +41,10 @@ export const en: Translations = {
     },
     ai: {
       title: 'AI Settings',
-      subtitle: 'Text cleanup model and behavior',
+      subtitle: 'Text cleanup behavior',
       llmEnabled: 'LLM cleanup',
       llmEnabledDesc: 'When off, raw transcript is pasted',
-      model: 'Qwen Model',
+      model: 'Cleanup model',
       cleaningMode: 'Cleanup mode',
       temperature: 'Temperature',
       temperatureMin: 'Precise',

@@ -69,14 +69,14 @@ export function ProfilesTab(): ReactElement {
             value={newName}
             aria-label="Yeni profil adı"
             placeholder="Profil adı (örn: İş, Kişisel)"
-            className="flex-1 h-9 rounded-lg border border-neutral-700 bg-neutral-950 px-3 text-sm text-neutral-100 outline-none transition focus:border-emerald-400 placeholder:text-neutral-600"
+            className="flex-1 h-9 rounded-lg border border-neutral-700 bg-neutral-950 px-3 text-sm text-neutral-100 outline-none transition focus:border-sd-accent placeholder:text-neutral-600"
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && void addProfile()}
           />
           <button
             type="button"
             disabled={!newName.trim()}
-            className="h-9 rounded-lg bg-emerald-400 px-4 text-sm font-medium text-neutral-950 transition hover:bg-emerald-300 disabled:opacity-40"
+            className="h-9 rounded-lg bg-sd-accent px-4 text-sm font-medium text-neutral-950 transition hover:opacity-90 disabled:opacity-40"
             onClick={() => void addProfile()}
           >
             Ekle
@@ -92,13 +92,13 @@ export function ProfilesTab(): ReactElement {
                 key={p.id}
                 className={`group flex items-center justify-between rounded-lg border px-4 py-3 transition ${
                   activeId === p.id
-                    ? 'border-emerald-400/40 bg-emerald-400/5'
+                    ? 'border-sd-accent bg-sd-hover'
                     : 'border-neutral-800/60 bg-neutral-950 hover:border-neutral-700'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   {activeId === p.id && (
-                    <span className="text-xs text-emerald-400 font-medium">Aktif</span>
+                    <span className="text-xs text-sd-accent font-medium">Aktif</span>
                   )}
                   <span className="text-sm text-neutral-200">{p.name}</span>
                 </div>
@@ -107,7 +107,7 @@ export function ProfilesTab(): ReactElement {
                     <button
                       type="button"
                       aria-label={`"${p.name}" profilini aktif et`}
-                      className="rounded-md px-2 py-1 text-xs text-emerald-500 hover:bg-emerald-500/10 transition"
+                      className="rounded-md px-2 py-1 text-xs text-sd-accent hover:bg-sd-hover transition"
                       onClick={() => void setActive(p.id)}
                     >
                       Aktif et

@@ -3,6 +3,7 @@ import { BrowserWindow, ipcMain, screen, shell } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import type {
   AppSettings,
+  AppSettingsUpdate,
   OverlayMicInfo,
   OverlayMouseRegion,
   OverlayState,
@@ -26,9 +27,7 @@ export interface OverlayWindowController {
 
 interface CreateOverlayWindowOptions {
   getSettings: () => AppSettings
-  updateSettings: (
-    settings: Partial<Pick<AppSettings, 'autoApply' | 'transformMode'>>
-  ) => AppSettings
+  updateSettings: (settings: AppSettingsUpdate) => AppSettings
   showSettingsWindow: () => void
   cancelRecording: () => void
   stopRecording: () => void
@@ -196,11 +195,23 @@ export function createOverlayWindow(options: CreateOverlayWindowOptions): Overla
     },
     sendSettings() {
       if (!overlayWindow.isDestroyed()) {
-        const { autoApply, hotkeyKeyCode, transformMode } = options.getSettings()
+        const {
+          autoApply,
+          hotkeyKeyCode,
+          transformMode,
+          appearanceAccent,
+          appearanceMetaphor,
+          appearanceFont,
+          radiusScale
+        } = options.getSettings()
         overlayWindow.webContents.send('overlay:settings', {
           autoApply,
           hotkeyKeyCode,
-          transformMode
+          transformMode,
+          appearanceAccent,
+          appearanceMetaphor,
+          appearanceFont,
+          radiusScale
         })
       }
     },

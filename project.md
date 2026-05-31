@@ -145,9 +145,10 @@ text-to-speech/
 ## Gizli Anahtar Yönetimi
 
 - API anahtarları **asla** kodda hardcode edilmeyecek
-- MVP'de: `.env` dosyası (kullanıcı kendi anahtarını girer settings'ten)
+- MVP/geliştirme döneminde: `.env` veya Settings ekranı üzerinden geliştirici/kullanıcı kendi anahtarını girer
 - Anahtarlar Electron `safeStorage` ile şifrelenmiş halde local'e yazılır
-- Production: backend proxy üzerinden anahtar saklama (kullanıcı bizim anahtarımızı görmez)
+- Production/son kullanıcı sürümünde: Groq/DashScope anahtarları Electron uygulamasına gömülmeyecek ve kullanıcıdan istenmeyecek. Uygulama bizim backend API'mize istek atacak; sağlayıcı anahtarları backend'de güvenli şekilde saklanacak.
+- Production akışı: `Electron app → DoDo backend → Groq/DashScope`. Bu model auth, kota, abonelik, rate limit ve kötüye kullanım koruması gerektirir.
 
 ## Yol Haritası
 

@@ -52,9 +52,9 @@ export async function startRecording(deviceId = ''): Promise<void> {
     audio: {
       ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
       channelCount: 1,
-      echoCancellation: false,
-      noiseSuppression: false,
-      autoGainControl: false
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
     }
   })
   void sendMicInfo(deviceId, mediaStream).catch(() => {

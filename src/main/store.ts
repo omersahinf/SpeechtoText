@@ -11,7 +11,7 @@ const DEFAULT_DASHSCOPE_MODEL = process.env.DASHSCOPE_MODEL ?? 'qwen3.6-plus'
 const DEFAULT_HOTKEY_KEY_CODE = 3640
 const DEFAULT_LLM_TEMPERATURE = 0.1
 
-const CURRENT_SCHEMA_VERSION = 1
+const CURRENT_SCHEMA_VERSION = 4
 
 const storedSettingsSchema = z.object({
   schemaVersion: z.number().int().min(1).default(CURRENT_SCHEMA_VERSION),
@@ -35,7 +35,12 @@ const storedSettingsSchema = z.object({
   appContextEnabled: z.boolean().default(false),
   uiLanguage: z.enum(['tr', 'en']).default('tr'),
   llmCacheEnabled: z.boolean().default(true),
-  activeProfileId: z.string().nullable().default(null)
+  activeProfileId: z.string().nullable().default(null),
+  appearanceAccent: z.enum(['green', 'amber', 'indigo', 'red']).default('indigo'),
+  appearanceMode: z.enum(['dark', 'light']).default('dark'),
+  appearanceMetaphor: z.enum(['wave', 'orb', 'dot', 'blob']).default('wave'),
+  appearanceFont: z.enum(['system', 'geist', 'serif']).default('system'),
+  radiusScale: z.number().min(0.4).max(1.8).default(1)
 })
 
 type StoredSettings = z.infer<typeof storedSettingsSchema>
@@ -49,7 +54,23 @@ export interface SettingsStore {
 type MigrationFn = (raw: Record<string, unknown>) => Record<string, unknown>
 
 const MIGRATIONS: Record<number, MigrationFn> = {
-  // İlerideki sürümler için: 2: (raw) => ({...raw, yeniAlan: 'X'}),
+  2: (raw) => raw,
+  3: (raw) => ({
+    ...raw,
+    appearanceAccent:
+      raw.appearanceAccent === undefined || raw.appearanceAccent === 'green'
+        ? 'amber'
+        : raw.appearanceAccent
+  }),
+  4: (raw) => ({
+    ...raw,
+    appearanceAccent:
+      raw.appearanceAccent === undefined ||
+      raw.appearanceAccent === 'green' ||
+      raw.appearanceAccent === 'amber'
+        ? 'indigo'
+        : raw.appearanceAccent
+  })
 }
 
 function migrateStored(raw: Record<string, unknown>): Record<string, unknown> {
@@ -59,8 +80,7 @@ function migrateStored(raw: Record<string, unknown>): Record<string, unknown> {
   while (version < CURRENT_SCHEMA_VERSION) {
     const next = version + 1
     const fn = MIGRATIONS[next]
-    if (!fn) break
-    current = fn(current)
+    current = fn ? fn(current) : current
     version = next
     current.schemaVersion = version
     logger.info(`[store] migrated settings to v${version}`)
@@ -97,7 +117,12 @@ function toPublicSettings(stored: StoredSettings): AppSettings {
     appContextEnabled: stored.appContextEnabled,
     uiLanguage: stored.uiLanguage,
     llmCacheEnabled: stored.llmCacheEnabled,
-    activeProfileId: stored.activeProfileId
+    activeProfileId: stored.activeProfileId,
+    appearanceAccent: stored.appearanceAccent,
+    appearanceMode: stored.appearanceMode,
+    appearanceMetaphor: stored.appearanceMetaphor,
+    appearanceFont: stored.appearanceFont,
+    radiusScale: stored.radiusScale
   }
 }
 
@@ -188,6 +213,26 @@ function toStoredUpdate(settings: AppSettingsUpdate): Partial<StoredSettings> {
 
   if (settings.activeProfileId !== undefined) {
     update.activeProfileId = settings.activeProfileId
+  }
+
+  if (settings.appearanceAccent !== undefined) {
+    update.appearanceAccent = settings.appearanceAccent
+  }
+
+  if (settings.appearanceMode !== undefined) {
+    update.appearanceMode = settings.appearanceMode
+  }
+
+  if (settings.appearanceMetaphor !== undefined) {
+    update.appearanceMetaphor = settings.appearanceMetaphor
+  }
+
+  if (settings.appearanceFont !== undefined) {
+    update.appearanceFont = settings.appearanceFont
+  }
+
+  if (settings.radiusScale !== undefined) {
+    update.radiusScale = settings.radiusScale
   }
 
   return update

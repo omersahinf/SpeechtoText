@@ -1,8 +1,4 @@
-import { createReadStream } from 'node:fs'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import Groq from 'groq-sdk'
+import Groq, { toFile, type Uploadable } from 'groq-sdk'
 import { withRetry, withTimeout } from './util/retry'
 
 export interface TranscribeOptions {
@@ -32,9 +28,13 @@ function getGroqClient(): Groq {
   })
 }
 
-async function transcribeOnce(client: Groq, audioPath: string, language: string): Promise<string> {
+async function transcribeOnce(
+  client: Groq,
+  audioFile: Uploadable,
+  language: string
+): Promise<string> {
   const result = await client.audio.transcriptions.create({
-    file: createReadStream(audioPath),
+    file: audioFile,
     model: process.env.GROQ_ASR_MODEL ?? DEFAULT_MODEL,
     language
   })
@@ -49,25 +49,16 @@ export async function transcribe(
   const startedAt = Date.now()
   const language = options.language ?? DEFAULT_LANGUAGE
   const client = getGroqClient()
-  const tempDir = await mkdtemp(join(tmpdir(), 'sesli-dikte-asr-'))
-  const audioPath = join(tempDir, `audio-${Date.now()}.wav`)
+  const audioFile = await toFile(audioBuffer, 'audio.wav', { type: 'audio/wav' })
 
-  try {
-    await writeFile(audioPath, audioBuffer)
+  const text = await withRetry(
+    () => withTimeout(transcribeOnce(client, audioFile, language), REQUEST_TIMEOUT_MS, 'asr'),
+    {
+      maxAttempts: MAX_ATTEMPTS,
+      baseDelayMs: BASE_RETRY_DELAY_MS,
+      label: 'asr'
+    }
+  )
 
-    const text = await withRetry(
-      () => withTimeout(transcribeOnce(client, audioPath, language), REQUEST_TIMEOUT_MS, 'asr'),
-      {
-        maxAttempts: MAX_ATTEMPTS,
-        baseDelayMs: BASE_RETRY_DELAY_MS,
-        label: 'asr'
-      }
-    )
-
-    return { text, latencyMs: Date.now() - startedAt }
-  } finally {
-    await rm(tempDir, { recursive: true, force: true }).catch(() => {
-      // best-effort cleanup; orphaned temp files are harmless
-    })
-  }
+  return { text, latencyMs: Date.now() - startedAt }
 }

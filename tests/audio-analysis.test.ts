@@ -63,6 +63,9 @@ describe('audio analysis', () => {
 
   it('detects the common silence hallucination', () => {
     expect(isLikelySilenceHallucination('Altyazı M.K.')).toBe(true)
+    expect(isLikelySilenceHallucination('Altyazılar')).toBe(true)
+    expect(isLikelySilenceHallucination('Abone olmayı unutmayın.')).toBe(true)
+    expect(isLikelySilenceHallucination('Yorumlarınızı bekliyorum')).toBe(true)
     expect(isLikelySilenceHallucination('Merhaba M.K.')).toBe(false)
   })
 })

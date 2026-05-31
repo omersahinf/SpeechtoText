@@ -1,7 +1,11 @@
 import OpenAI from 'openai'
 import { logger } from './logger'
 import { withRetry, withTimeout } from './util/retry'
-import { CLEAN_TRANSCRIPT_SYSTEM_PROMPT, getPromptForMode } from './prompts/tr-cleanup'
+import {
+  CLEAN_TRANSCRIPT_PROMPT_VERSION,
+  CLEAN_TRANSCRIPT_SYSTEM_PROMPT,
+  getPromptForMode
+} from './prompts/tr-cleanup'
 import { getVocabBlock, type VocabPreset } from './prompts/vocab-presets'
 import { getAppContextInstruction } from './prompts/app-context'
 import { createLlmCache, buildCacheKey } from './util/llm-cache'
@@ -37,6 +41,10 @@ const DEFAULT_TEMPERATURE = 0.1
 export { CLEAN_TRANSCRIPT_SYSTEM_PROMPT }
 
 const llmCache = createLlmCache()
+
+function getPromptCacheVersion(options: CleanTranscriptOptions): string {
+  return `${CLEAN_TRANSCRIPT_PROMPT_VERSION}:${getPromptForMode(options.mode ?? 'conservative').id}`
+}
 
 export function estimateMaxTokens(rawText: string): number {
   const wordCount = rawText.trim().split(/\s+/).filter(Boolean).length
@@ -113,7 +121,10 @@ export async function cleanTranscript(
 
   // LLM cache kontrolü
   if (options.useCache !== false) {
-    const cacheKey = buildCacheKey(rawText, options)
+    const cacheKey = buildCacheKey(rawText, {
+      ...options,
+      promptVersion: getPromptCacheVersion(options)
+    })
     const cached = llmCache.get(cacheKey)
     if (cached) {
       logger.debug('[llm] cache hit')
@@ -135,7 +146,10 @@ export async function cleanTranscript(
 
     // Cache'e yaz
     if (options.useCache !== false) {
-      const cacheKey = buildCacheKey(rawText, options)
+      const cacheKey = buildCacheKey(rawText, {
+        ...options,
+        promptVersion: getPromptCacheVersion(options)
+      })
       llmCache.set(cacheKey, text)
     }
 

@@ -28,9 +28,9 @@ export function MicLevelMeter({ isActive, deviceId }: MicLevelMeterProps): React
           audio: {
             ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
             channelCount: 1,
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
           }
         })
 
@@ -106,7 +106,7 @@ export function MicLevelMeter({ isActive, deviceId }: MicLevelMeterProps): React
             className={`flex-1 rounded-sm transition-all duration-75 ${
               isLit
                 ? i < barCount * 0.6
-                  ? 'bg-emerald-400'
+                  ? 'bg-sd-accent'
                   : i < barCount * 0.85
                     ? 'bg-yellow-400'
                     : 'bg-red-400'

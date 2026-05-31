@@ -4,7 +4,15 @@ export type HotkeyMode = 'push-to-talk' | 'toggle'
 
 export type TransformMode = 'polish' | 'raw'
 
-export type OverlayState = 'idle' | 'recording' | 'processing' | 'error'
+export type OverlayState = 'idle' | 'recording' | 'processing' | 'edit' | 'error'
+
+export type AppearanceAccent = 'green' | 'amber' | 'indigo' | 'red'
+
+export type AppearanceMode = 'dark' | 'light'
+
+export type AppearanceMetaphor = 'wave' | 'orb' | 'dot' | 'blob'
+
+export type AppearanceFont = 'system' | 'geist' | 'serif'
 
 export type OverlayMouseRegion =
   | 'interactive'
@@ -78,6 +86,11 @@ export interface AppSettings {
   uiLanguage: UiLanguage
   llmCacheEnabled: boolean
   activeProfileId: string | null
+  appearanceAccent: AppearanceAccent
+  appearanceMode: AppearanceMode
+  appearanceMetaphor: AppearanceMetaphor
+  appearanceFont: AppearanceFont
+  radiusScale: number
 }
 
 export type AppSettingsUpdate = Partial<AppSettings>
@@ -178,7 +191,18 @@ export interface OverlayApi {
   onLevel: (callback: (level: number) => void) => () => void
   onMicInfo: (callback: (info: OverlayMicInfo) => void) => () => void
   onSettings: (
-    callback: (settings: Pick<AppSettings, 'autoApply' | 'transformMode' | 'hotkeyKeyCode'>) => void
+    callback: (
+      settings: Pick<
+        AppSettings,
+        | 'autoApply'
+        | 'transformMode'
+        | 'hotkeyKeyCode'
+        | 'appearanceAccent'
+        | 'appearanceMetaphor'
+        | 'appearanceFont'
+        | 'radiusScale'
+      >
+    ) => void
   ) => () => void
   cancelRecording: () => Promise<void>
   stopRecording: () => Promise<void>

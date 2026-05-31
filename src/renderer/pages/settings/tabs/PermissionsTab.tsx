@@ -51,7 +51,7 @@ export function PermissionsTab(): ReactElement {
             <div className="mt-4 flex gap-3">
               <button
                 type="button"
-                className="h-10 rounded-lg bg-emerald-400 px-5 text-sm font-medium text-neutral-950 transition hover:bg-emerald-300 active:scale-[0.98]"
+                className="h-10 rounded-lg bg-sd-accent px-5 text-sm font-medium text-neutral-950 transition hover:opacity-90 active:scale-[0.98]"
                 onClick={() => void window.api.permissions.requestMicrophone().then(setPermissions)}
               >
                 Mikrofon İzni İste
@@ -101,7 +101,7 @@ export function PermissionsTab(): ReactElement {
               <div className="mt-4 flex gap-3">
                 <button
                   type="button"
-                  className="h-10 rounded-lg bg-emerald-400 px-5 text-sm font-medium text-neutral-950 transition hover:bg-emerald-300 active:scale-[0.98]"
+                  className="h-10 rounded-lg bg-sd-accent px-5 text-sm font-medium text-neutral-950 transition hover:opacity-90 active:scale-[0.98]"
                   onClick={() => void window.api.permissions.openAccessibilitySettings()}
                 >
                   Sistem Ayarlarını Aç
@@ -117,13 +117,13 @@ export function PermissionsTab(): ReactElement {
             )}
 
           {accessibilityJustGranted && permissions?.accessibility === 'granted' && (
-            <div className="mt-5 rounded-lg border border-emerald-400/30 bg-emerald-400/5 p-4">
-              <p className="text-sm text-emerald-300">
+            <div className="mt-5 rounded-lg border border-sd-accent bg-sd-hover p-4">
+              <p className="text-sm text-sd-accent">
                 ✓ İzin onaylandı. Aktif olması için uygulamayı yeniden başlatman gerekiyor.
               </p>
               <button
                 type="button"
-                className="mt-3 h-9 rounded-lg bg-emerald-400 px-4 text-sm font-medium text-neutral-950 transition hover:bg-emerald-300 active:scale-[0.98]"
+                className="mt-3 h-9 rounded-lg bg-sd-accent px-4 text-sm font-medium text-neutral-950 transition hover:opacity-90 active:scale-[0.98]"
                 onClick={() => void window.api.app.relaunch()}
               >
                 Yeniden Başlat

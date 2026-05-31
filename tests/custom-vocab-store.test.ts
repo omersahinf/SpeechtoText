@@ -78,4 +78,26 @@ describe('createCustomVocabStore', () => {
       expect(fragment).toContain('ÖZEL TERİMLER')
     })
   })
+
+  describe('applyToText', () => {
+    it('replaces exact custom vocab terms after cleanup', () => {
+      store.add('kubernetes', 'Kubernetes')
+
+      expect(store.applyToText('kubernetes cluster hazır')).toBe('Kubernetes cluster hazır')
+    })
+
+    it('replaces Claude phonetic variants', () => {
+      store.add('cloud', 'Claude')
+
+      expect(store.applyToText('cloud ile yaz')).toBe('Claude ile yaz')
+      expect(store.applyToText('klaud ile yaz')).toBe('Claude ile yaz')
+      expect(store.applyToText("klod'a sor")).toBe("Claude'a sor")
+    })
+
+    it('does not replace inside longer words', () => {
+      store.add('cloud', 'Claude')
+
+      expect(store.applyToText('cloudflare ayarı')).toBe('cloudflare ayarı')
+    })
+  })
 })

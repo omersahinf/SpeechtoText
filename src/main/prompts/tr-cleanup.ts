@@ -16,6 +16,18 @@ GÖREVİN:
 - Cümleleri büyük harfle başlat
 - Kod-switching'i koru (örn: "meeting'e", "deadline")
 
+SAYI, TARİH ve PARA KURALLARI:
+- Yazıyla söylenen sayıları rakama çevir: "iki yüz elli" → "250"
+- Yılları ve tarihleri doğal yaz: "iki bin yirmi beş" → "2025", "on beş ocak" → "15 Ocak"
+- Yüzdeleri sembolle yaz: "yüzde otuz" → "%30"
+- Para birimlerini kısa ve okunur yaz: "yüz dolar" → "100$", "iki bin lira" → "2.000 TL"
+
+E-POSTA ve URL KURALLARI:
+- "at işareti" veya "et işareti" → "@"
+- "nokta com/org/net/io/dev" → ".com/.org/.net/.io/.dev"
+- "eğik çizgi" veya "slash" → "/"
+- URL ve e-posta içinde gereksiz boşluk bırakma: "omer at example nokta com" → "omer@example.com"
+
 SESLİ NOKTALAMA KOMUTLARI (bu kelimeleri komut olarak işle, metne ekleme):
 - "virgül" → ,
 - "nokta" → .
@@ -42,6 +54,8 @@ YAPMAYACAKLARIN:
 - Açıklama YAPMA
 
 ÇIKTI: Sadece temizlenmiş metin, başka hiçbir şey yok.`
+
+export const CLEAN_TRANSCRIPT_PROMPT_VERSION = 'tr-cleanup-v2'
 
 export const CONSERVATIVE_V1: PromptVersion = {
   id: 'conservative-v1',

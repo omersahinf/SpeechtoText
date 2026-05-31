@@ -116,5 +116,30 @@ export function isLikelySilenceHallucination(text: string): boolean {
     .replace(/\s+/g, ' ')
     .trim()
 
-  return normalized === 'altyazı m k' || normalized === 'altyazi m k'
+  if (!normalized) {
+    return true
+  }
+
+  const ascii = normalized
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ş/g, 's')
+    .replace(/ı/g, 'i')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c')
+
+  const knownHallucinations = new Set([
+    'altyazi',
+    'altyazilar',
+    'altyazi m k',
+    'altyazi mk',
+    'alt yazi',
+    'abone olmayi unutmayin',
+    'yorumlarinizi bekliyorum',
+    'tekrar gorusmek uzere',
+    'izlediginiz icin tesekkurler',
+    'beni izlediginiz icin tesekkur ederim'
+  ])
+
+  return knownHallucinations.has(ascii)
 }

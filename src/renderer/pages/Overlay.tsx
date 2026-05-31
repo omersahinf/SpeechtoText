@@ -1,33 +1,31 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
 import type { OverlayMicInfo, OverlayState, TransformMode } from '@/shared/types'
+import type { AppearanceMetaphor } from '@/shared/types'
 import { getHotkeyShortLabel } from '@/shared/hotkeys'
 import { IdlePill } from '@/renderer/components/overlay/IdlePill'
 import { MenuPanel } from '@/renderer/components/overlay/MenuPanel'
 import { MicIndicator } from '@/renderer/components/overlay/MicIndicator'
-import { VoiceLine } from '@/renderer/components/overlay/VoiceLine'
+import { Blob } from '@/renderer/components/overlay/Blob'
+import { Dot } from '@/renderer/components/overlay/Dot'
+import { Orb } from '@/renderer/components/overlay/Orb'
+import { QuickEdit } from '@/renderer/components/overlay/QuickEdit'
+import { Wave } from '@/renderer/components/overlay/Wave'
+import { applyAppearance } from '@/renderer/styles/tokens'
 import '@/renderer/components/overlay/styles.css'
 
-function MicIcon(): ReactElement {
+function SparkleIcon(): ReactElement {
   return (
-    <svg className="overlay-svg-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <rect x="5.5" y="2.5" width="5" height="7" rx="2.5" stroke="currentColor" strokeWidth="1.5" />
-      <path
-        d="M3.75 7.5a4.25 4.25 0 0 0 8.5 0"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path d="M8 12v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <svg className="overlay-sparkle-icon" viewBox="0 0 12 12" aria-hidden="true">
+      <path d="M6 1l1 3.5 3.5 1L7 6.5 6 10 5 6.5 1.5 5.5l3.5-1L6 1z" />
     </svg>
   )
 }
 
-function CloseIcon(): ReactElement {
-  return (
-    <svg className="overlay-control-icon" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-      <path d="M3 3l6 6M9 3 3 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  )
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000))
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = String(totalSeconds % 60).padStart(2, '0')
+  return `${minutes}:${seconds}`
 }
 
 export default function Overlay(): ReactElement {
@@ -40,11 +38,15 @@ export default function Overlay(): ReactElement {
   const [errorMessage, setErrorMessage] = useState('Hata')
   const [autoApply, setAutoApply] = useState(true)
   const [transformMode, setTransformMode] = useState<TransformMode>('polish')
+  const [metaphor, setMetaphor] = useState<AppearanceMetaphor>('wave')
   const [hotkeyKeyCode, setHotkeyKeyCode] = useState(3640)
   const hotkeyLabel = getHotkeyShortLabel(hotkeyKeyCode)
   const [quickEditOpen, setQuickEditOpen] = useState(false)
   const [quickEditInstruction, setQuickEditInstruction] = useState('')
   const [quickEditLoading, setQuickEditLoading] = useState(false)
+  const [quickEditTranscript, setQuickEditTranscript] = useState('')
+  const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(null)
+  const [now, setNow] = useState(Date.now())
   const quickEditInputRef = useRef<HTMLInputElement>(null)
 
   const visualState = useMemo(() => {
@@ -87,6 +89,14 @@ export default function Overlay(): ReactElement {
       setAutoApply(settings.autoApply)
       setHotkeyKeyCode(settings.hotkeyKeyCode)
       setTransformMode(settings.transformMode)
+      setMetaphor(settings.appearanceMetaphor ?? 'wave')
+      applyAppearance({
+        appearanceAccent: settings.appearanceAccent,
+        appearanceMetaphor: settings.appearanceMetaphor,
+        appearanceFont: settings.appearanceFont,
+        radiusScale: settings.radiusScale,
+        appearanceMode: 'dark'
+      })
     })
 
     return () => {
@@ -97,6 +107,25 @@ export default function Overlay(): ReactElement {
       window.overlayApi.setMouseRegion('passthrough')
     }
   }, [])
+
+  useEffect(() => {
+    if (remoteState === 'recording' && recordingStartedAt === null) {
+      setRecordingStartedAt(Date.now())
+    }
+
+    if (remoteState !== 'recording') {
+      setRecordingStartedAt(null)
+    }
+  }, [recordingStartedAt, remoteState])
+
+  useEffect(() => {
+    if (remoteState !== 'recording') {
+      return
+    }
+
+    const timer = window.setInterval(() => setNow(Date.now()), 250)
+    return () => window.clearInterval(timer)
+  }, [remoteState])
 
   useEffect(() => {
     if (!navigator.mediaDevices?.enumerateDevices) {
@@ -218,6 +247,51 @@ export default function Overlay(): ReactElement {
     await window.overlayApi.openSettings()
   }
 
+  async function openQuickEdit(): Promise<void> {
+    setQuickEditOpen(true)
+    window.overlayApi.setMouseRegion('interactive')
+    try {
+      const text = await navigator.clipboard.readText()
+      setQuickEditTranscript(text)
+    } catch {
+      setQuickEditTranscript('')
+    }
+    window.setTimeout(() => quickEditInputRef.current?.focus(), 50)
+  }
+
+  function renderRecordingViz(): ReactElement {
+    if (metaphor === 'orb') {
+      return <Orb />
+    }
+    if (metaphor === 'dot') {
+      return <Dot />
+    }
+    if (metaphor === 'blob') {
+      return <Blob />
+    }
+    return <Wave level={micLevel} />
+  }
+
+  async function submitQuickEdit(): Promise<void> {
+    if (!quickEditInstruction.trim()) return
+
+    setQuickEditLoading(true)
+    try {
+      const result = await window.overlayApi.quickEdit(quickEditInstruction)
+      if (result.ok && result.text) {
+        await navigator.clipboard.writeText(result.text)
+        setPillMessage('Düzenlendi')
+      } else if (result.error) {
+        setErrorMessage(result.error)
+        setRemoteState('error')
+      }
+    } finally {
+      setQuickEditLoading(false)
+      setQuickEditOpen(false)
+      setQuickEditInstruction('')
+    }
+  }
+
   return (
     <main className="overlay-root">
       <div className="overlay-stack">
@@ -250,15 +324,11 @@ export default function Overlay(): ReactElement {
             onMouseEnter={setInteractive}
             onMouseLeave={() => setPassthrough()}
           >
-            <button
-              type="button"
-              className="overlay-control-button"
-              aria-label="Kaydı iptal et"
-              onClick={() => void window.overlayApi.cancelRecording()}
-            >
-              <CloseIcon />
-            </button>
-            <VoiceLine level={micLevel} />
+            <span className="overlay-rec-dot" aria-hidden="true" />
+            {renderRecordingViz()}
+            <span className="overlay-timer">
+              {formatDuration(now - (recordingStartedAt ?? now))}
+            </span>
             <button
               type="button"
               className="overlay-control-button overlay-stop-button"
@@ -277,11 +347,9 @@ export default function Overlay(): ReactElement {
             onMouseEnter={setInteractive}
             onMouseLeave={() => setPassthrough()}
           >
-            <span className="overlay-icon" aria-hidden="true">
-              <MicIcon />
-            </span>
-            <span className="overlay-pill__label">İşleniyor</span>
             <span className="overlay-spinner" aria-hidden="true" />
+            <span className="overlay-pill__label">Türkçe temizleniyor...</span>
+            <SparkleIcon />
           </div>
         )}
 
@@ -296,82 +364,47 @@ export default function Overlay(): ReactElement {
           </div>
         )}
 
-        {remoteState === 'idle' && (
+        {(remoteState === 'idle' || remoteState === 'edit') && (
           <>
-            <IdlePill
-              message={pillMessage}
-              onClick={() => {
-                setIsHovering(false)
-                setMenuOpen((current) => !current)
-                window.overlayApi.setMouseRegion('interactive')
-              }}
-              onMouseEnter={setInteractive}
-              onMouseLeave={() => setPassthrough()}
-            />
-            {pillMessage === 'Tamam' || pillMessage === '' ? null : null}
-            {/* Quick Edit Trigger — sadece başarılı inject sonrası görünür */}
-            {pillMessage === 'Tamam' && !quickEditOpen && (
-              <button
-                type="button"
-                className="overlay-quick-edit-btn"
-                aria-label="Metni düzenle"
-                title="Son metni dönüştür"
+            {quickEditOpen || remoteState === 'edit' ? (
+              <QuickEdit
+                transcript={quickEditTranscript}
+                instruction={quickEditInstruction}
+                loading={quickEditLoading}
+                inputRef={quickEditInputRef}
+                onInstructionChange={setQuickEditInstruction}
                 onMouseEnter={setInteractive}
-                onClick={() => {
-                  setQuickEditOpen(true)
-                  window.overlayApi.setMouseRegion('interactive')
-                  window.setTimeout(() => quickEditInputRef.current?.focus(), 50)
+                onCancel={() => {
+                  setQuickEditOpen(false)
+                  setPassthrough()
                 }}
-              >
-                ✎
-              </button>
-            )}
-            {quickEditOpen && (
-              <form
-                className="overlay-quick-edit-panel"
-                onMouseEnter={setInteractive}
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  if (!quickEditInstruction.trim()) return
-                  setQuickEditLoading(true)
-                  void window.overlayApi
-                    .quickEdit(quickEditInstruction)
-                    .then(async (result) => {
-                      if (result.ok && result.text) {
-                        await navigator.clipboard.writeText(result.text)
-                        setPillMessage('Düzenlendi ✓')
-                      }
-                    })
-                    .finally(() => {
-                      setQuickEditLoading(false)
-                      setQuickEditOpen(false)
-                      setQuickEditInstruction('')
-                    })
-                }}
-              >
-                <input
-                  ref={quickEditInputRef}
-                  type="text"
-                  value={quickEditInstruction}
-                  placeholder='Talimat: "daha resmi yap"'
-                  className="overlay-quick-edit-input"
-                  disabled={quickEditLoading}
-                  onChange={(e) => setQuickEditInstruction(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      setQuickEditOpen(false)
-                      setPassthrough()
-                    }
+                onSubmit={() => void submitQuickEdit()}
+              />
+            ) : (
+              <>
+                <IdlePill
+                  message={pillMessage}
+                  onClick={() => {
+                    setIsHovering(false)
+                    setMenuOpen((current) => !current)
+                    window.overlayApi.setMouseRegion('interactive')
                   }}
+                  onMouseEnter={setInteractive}
+                  onMouseLeave={() => setPassthrough()}
                 />
-                <button
-                  type="submit"
-                  disabled={quickEditLoading || !quickEditInstruction.trim()}
-                  className="overlay-quick-edit-submit"
-                >
-                  {quickEditLoading ? '…' : '→'}
-                </button>
-              </form>
+                {pillMessage === 'Tamam' && (
+                  <button
+                    type="button"
+                    className="overlay-quick-edit-trigger"
+                    aria-label="Metni düzenle"
+                    title="Son metni dönüştür"
+                    onMouseEnter={setInteractive}
+                    onClick={() => void openQuickEdit()}
+                  >
+                    Edit
+                  </button>
+                )}
+              </>
             )}
           </>
         )}

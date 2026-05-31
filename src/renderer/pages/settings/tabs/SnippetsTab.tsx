@@ -55,7 +55,7 @@ export function SnippetsTab(): ReactElement {
               value={trigger}
               aria-label="Snippet tetikleyicisi"
               placeholder="örn: adresim"
-              className="h-9 rounded-lg border border-neutral-700 bg-neutral-950 px-3 text-sm text-neutral-100 outline-none transition focus:border-emerald-400 placeholder:text-neutral-600"
+              className="h-9 rounded-lg border border-neutral-700 bg-neutral-950 px-3 text-sm text-neutral-100 outline-none transition focus:border-sd-accent placeholder:text-neutral-600"
               onChange={(e) => setTrigger(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && void addSnippet()}
             />
@@ -67,7 +67,7 @@ export function SnippetsTab(): ReactElement {
               value={expansion}
               aria-label="Snippet genişletme metni"
               placeholder="örn: Atatürk Cad. No:5 Kadıköy/İstanbul"
-              className="h-9 rounded-lg border border-neutral-700 bg-neutral-950 px-3 text-sm text-neutral-100 outline-none transition focus:border-emerald-400 placeholder:text-neutral-600"
+              className="h-9 rounded-lg border border-neutral-700 bg-neutral-950 px-3 text-sm text-neutral-100 outline-none transition focus:border-sd-accent placeholder:text-neutral-600"
               onChange={(e) => setExpansion(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && void addSnippet()}
             />
@@ -76,7 +76,7 @@ export function SnippetsTab(): ReactElement {
             <button
               type="button"
               disabled={!trigger.trim() || !expansion.trim()}
-              className="h-9 rounded-lg bg-emerald-400 px-4 text-sm font-medium text-neutral-950 transition hover:bg-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="h-9 rounded-lg bg-sd-accent px-4 text-sm font-medium text-neutral-950 transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={() => void addSnippet()}
             >
               Ekle
@@ -96,9 +96,7 @@ export function SnippetsTab(): ReactElement {
                 className="group flex items-start gap-3 rounded-lg border border-neutral-800/60 bg-neutral-950 px-4 py-3"
               >
                 <div className="min-w-0 flex-1 grid grid-cols-[auto_16px_1fr] items-start gap-2 text-sm">
-                  <span className="font-mono text-emerald-400 font-medium truncate">
-                    {s.trigger}
-                  </span>
+                  <span className="font-mono text-sd-accent font-medium truncate">{s.trigger}</span>
                   <span className="text-neutral-600 mt-0.5">→</span>
                   <span className="text-neutral-300 break-words">{s.expansion}</span>
                 </div>

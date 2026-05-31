@@ -1,4 +1,4 @@
-import { clipboard } from 'electron'
+import { clipboard, net } from 'electron'
 import { randomUUID } from 'node:crypto'
 import type { TranscriptionResult } from './asr'
 import type { CleanTranscriptResult } from './llm'
@@ -52,8 +52,87 @@ interface PipelineDeps {
   }
   customVocab?: {
     buildPromptFragment: () => string
+    applyToText: (text: string) => string
   }
   onSettingsError?: (errorType: 'api-key-missing' | 'network-error' | 'rate-limit') => void
+}
+
+function getErrorStatus(error: unknown): number | null {
+  if (!error || typeof error !== 'object') {
+    return null
+  }
+
+  const status = (error as { status?: unknown }).status
+  if (typeof status === 'number') {
+    return status
+  }
+
+  const code = (error as { code?: unknown }).code
+  if (typeof code === 'number') {
+    return code
+  }
+
+  return null
+}
+
+function isConnectionError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  return /network|fetch|enotfound|econnreset|etimedout|eai_again|api connection/i.test(message)
+}
+
+function isTimeoutError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  return /timeout|timed out|zaman aşımı/i.test(message)
+}
+
+function describeApiError(error: unknown): {
+  title: string
+  detail: string
+  overlayMessage: string
+  settingsError?: 'network-error' | 'rate-limit'
+} {
+  const status = getErrorStatus(error)
+
+  if (status === 401 || status === 403) {
+    return {
+      title: 'API anahtarı geçersiz',
+      detail: 'Groq API anahtarını kontrol edin.',
+      overlayMessage: 'API anahtarı geçersiz'
+    }
+  }
+
+  if (status === 429) {
+    return {
+      title: 'Çok fazla istek',
+      detail: 'Groq kotası veya hız limiti dolmuş olabilir.',
+      overlayMessage: 'Çok fazla istek',
+      settingsError: 'rate-limit'
+    }
+  }
+
+  if (isTimeoutError(error)) {
+    return {
+      title: 'Transkripsiyon zaman aşımı',
+      detail: 'Ağ yavaş olabilir. Kısa bir kayıtla tekrar deneyin.',
+      overlayMessage: 'Zaman aşımı',
+      settingsError: 'network-error'
+    }
+  }
+
+  if (isConnectionError(error)) {
+    return {
+      title: 'İnternet bağlantısı yok',
+      detail: 'Bağlantınızı kontrol edip tekrar deneyin.',
+      overlayMessage: 'Çevrimdışı',
+      settingsError: 'network-error'
+    }
+  }
+
+  return {
+    title: 'Transkripsiyon başarısız',
+    detail: 'Tekrar deneyin veya API ayarlarını kontrol edin.',
+    overlayMessage: 'Transkripsiyon başarısız'
+  }
 }
 
 export interface Pipeline {
@@ -201,23 +280,27 @@ export function createPipeline(deps: PipelineDeps): Pipeline {
           return
         }
 
+        if (!net.isOnline()) {
+          notifyError('Çevrimdışı', 'İnternet bağlantısı yok.')
+          deps.overlay?.sendState('error', { message: 'Çevrimdışı' })
+          deps.onSettingsError?.('network-error')
+          keepOverlayErrorVisible = true
+          return
+        }
+
         try {
           const asrResult = await deps.asr.transcribe(audioBuffer)
           rawText = asrResult.text
           asrMs = asrResult.latencyMs
         } catch (error) {
           logger.error('[pipeline] ASR failed', error)
-          const isNetworkError =
-            error instanceof Error &&
-            (error.message.includes('network') ||
-              error.message.includes('ENOTFOUND') ||
-              error.message.includes('fetch'))
-          if (isNetworkError) {
-            deps.onSettingsError?.('network-error')
+          const apiError = describeApiError(error)
+          if (apiError.settingsError) {
+            deps.onSettingsError?.(apiError.settingsError)
           }
-          notifyError('Transkripsiyon başarısız', 'İnternet bağlantınızı kontrol edin.')
+          notifyError(apiError.title, apiError.detail)
           deps.tray.flashError()
-          deps.overlay?.sendState('error', { message: 'Transkripsiyon başarısız' })
+          deps.overlay?.sendState('error', { message: apiError.overlayMessage })
           keepOverlayErrorVisible = true
           return
         }
@@ -244,9 +327,11 @@ export function createPipeline(deps: PipelineDeps): Pipeline {
           .filter(Boolean)
           .join('\n')
 
-        const llmResult =
-          settings.transformMode === 'raw' || !settings.llmEnabled
-            ? { text: rawText, latencyMs: 0 }
+        const shouldRunLlm = settings.transformMode !== 'raw' && settings.llmEnabled
+        const llmResult = !shouldRunLlm
+          ? { text: rawText, latencyMs: 0 }
+          : !settings.dashscopeApiKey
+            ? { text: rawText, latencyMs: 0, fallback: true }
             : await deps.llm.cleanTranscript(rawText, {
                 mode: settings.llmMode,
                 temperature: settings.llmTemperature,
@@ -256,15 +341,26 @@ export function createPipeline(deps: PipelineDeps): Pipeline {
                 useCache: settings.llmCacheEnabled !== false
               })
 
-        if ('fallback' in llmResult && llmResult.fallback) {
-          notifyWarn('Metin temizleme başarısız', 'Ham metin yapıştırıldı.')
+        if (shouldRunLlm && !settings.dashscopeApiKey) {
+          notifyWarn(
+            'AI anahtarı eksik',
+            'DashScope API anahtarı olmadığı için ham metin kullanıldı.'
+          )
           deps.overlay?.showMessage('AI temizleme atlandı')
         }
 
+        if ('fallback' in llmResult && llmResult.fallback) {
+          if (settings.dashscopeApiKey) {
+            notifyWarn('Metin temizleme başarısız', 'Ham metin yapıştırıldı.')
+            deps.overlay?.showMessage('AI temizleme atlandı')
+          }
+        }
+
         // Snippet genişletme: pipeline'dan geçen metin snippet store'da replace edilir
-        const cleanText = deps.snippets
-          ? deps.snippets.applySnippets(llmResult.text)
+        const vocabText = deps.customVocab
+          ? deps.customVocab.applyToText(llmResult.text)
           : llmResult.text
+        const cleanText = deps.snippets ? deps.snippets.applySnippets(vocabText) : vocabText
         const injectStartedAt = Date.now()
 
         // --- Inject ---

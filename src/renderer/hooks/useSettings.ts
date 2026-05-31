@@ -22,7 +22,12 @@ const EMPTY_SETTINGS: AppSettings = {
   appContextEnabled: false,
   uiLanguage: 'tr',
   llmCacheEnabled: true,
-  activeProfileId: null
+  activeProfileId: null,
+  appearanceAccent: 'indigo',
+  appearanceMode: 'dark',
+  appearanceMetaphor: 'wave',
+  appearanceFont: 'system',
+  radiusScale: 1
 }
 
 export interface UseSettingsReturn {
@@ -55,7 +60,7 @@ export function useSettings(): UseSettingsReturn {
   }, [])
 
   const isDirty = JSON.stringify(settings) !== JSON.stringify(savedSettings)
-  const canSave = Boolean(settings.groqApiKey.trim() && settings.dashscopeApiKey.trim())
+  const canSave = isDirty
 
   const saveSettings = useCallback(async (): Promise<void> => {
     setIsSaving(true)

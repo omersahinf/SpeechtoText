@@ -78,9 +78,11 @@ export function buildCacheKey(
     customPrompt?: string
     vocabPreset?: string
     appContext?: string | null
+    promptVersion?: string
   }
 ): string {
   return JSON.stringify({
+    pv: options.promptVersion ?? '',
     t: rawText,
     m: options.mode ?? '',
     temp: options.temperature ?? 0,
