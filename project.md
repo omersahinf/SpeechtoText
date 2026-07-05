@@ -39,9 +39,9 @@ Türk kullanıcılar için optimize edilmiş, sistem geneli çalışan sesli dik
 
 - **Groq Whisper API** — transkripsiyon (ücretsiz tier, Türkçe, çok hızlı)
   - Sonraki: kendi fine-tune Whisper (Common Voice TR + iç data)
-- **Alibaba Qwen (DashScope)** — LLM temizleme katmanı
-  - Başlangıç model: `qwen-plus` (denge), gerekirse `qwen-max`
-  - Sonraki opsiyon: Claude Haiku karşılaştırma için A/B
+- **Ollama + Gemma** — yerel LLM temizleme katmanı
+  - Başlangıç model: `gemma2:2b`
+  - Sonraki opsiyon: daha büyük yerel Gemma modelleriyle A/B
 - **Supabase** — auth, kullanıcı, kullanım kotası (sonraki aşama)
 - **Stripe / iyzico** — ödeme (sonraki aşama)
 
@@ -60,7 +60,7 @@ Türk kullanıcılar için optimize edilmiş, sistem geneli çalışan sesli dik
 - [ ] Global hotkey: `Fn` veya `Right Option` basılı tut
 - [ ] Mikrofon kaydı (basılı tutulduğu süre)
 - [ ] Groq Whisper'a gönder
-- [ ] Alibaba Qwen ile Türkçe temizleme
+- [ ] Ollama/Gemma ile Türkçe temizleme
 - [ ] Aktif uygulamaya metni yapıştır
 - [ ] Basit settings ekranı (hotkey, dil, temizleme açık/kapalı)
 
@@ -82,7 +82,7 @@ Türk kullanıcılar için optimize edilmiş, sistem geneli çalışan sesli dik
 │  │ Global Hotkey Listener (uiohook)   │ │
 │  │ Audio Recorder (mic)               │ │
 │  │ ASR Client (Groq Whisper)          │ │
-│  │ LLM Client (Alibaba Qwen)          │ │
+│  │ LLM Client (Ollama/Gemma)          │ │
 │  │ Text Injector (nut-js)             │ │
 │  │ Tray Icon                          │ │
 │  └────────────────────────────────────┘ │
@@ -106,7 +106,7 @@ Türk kullanıcılar için optimize edilmiş, sistem geneli çalışan sesli dik
 2. Mikrofon kaydı başlar (16kHz, mono, WAV)
 3. Kullanıcı tuşu bırakır → kayıt durur
 4. Audio Groq Whisper'a yüklenir (Türkçe forced)
-5. Ham transkript Alibaba Qwen'e gider, Türkçe-özel sistem promptu ile temizlenir
+5. Ham transkript yerel Ollama/Gemma modeline gider, Türkçe-özel sistem promptu ile temizlenir
 6. Temiz metin aktif uygulamaya `nut-js` ile yapıştırılır
 7. Tray ikonu normal hale döner
 
@@ -125,7 +125,7 @@ text-to-speech/
 │   │   ├── hotkey.ts
 │   │   ├── recorder.ts
 │   │   ├── asr.ts                # Groq Whisper client
-│   │   ├── llm.ts                # Alibaba Qwen client
+│   │   ├── llm.ts                # Ollama/Gemma client
 │   │   ├── injector.ts           # text yapıştırma
 │   │   └── tray.ts
 │   ├── preload/
@@ -147,8 +147,8 @@ text-to-speech/
 - API anahtarları **asla** kodda hardcode edilmeyecek
 - MVP/geliştirme döneminde: `.env` veya Settings ekranı üzerinden geliştirici/kullanıcı kendi anahtarını girer
 - Anahtarlar Electron `safeStorage` ile şifrelenmiş halde local'e yazılır
-- Production/son kullanıcı sürümünde: Groq/DashScope anahtarları Electron uygulamasına gömülmeyecek ve kullanıcıdan istenmeyecek. Uygulama bizim backend API'mize istek atacak; sağlayıcı anahtarları backend'de güvenli şekilde saklanacak.
-- Production akışı: `Electron app → DoDo backend → Groq/DashScope`. Bu model auth, kota, abonelik, rate limit ve kötüye kullanım koruması gerektirir.
+- Production/son kullanıcı sürümünde: Groq anahtarı Electron uygulamasına gömülmeyecek ve kullanıcıdan istenmeyecek. Uygulama bizim backend API'mize istek atacak; sağlayıcı anahtarları backend'de güvenli şekilde saklanacak. LLM temizleme yerelde Ollama ile kalabilir.
+- Production akışı: `Electron app → DoDo backend → Groq` + yerel Ollama/Gemma temizliği. Bu model auth, kota, abonelik, rate limit ve kötüye kullanım koruması gerektirir.
 
 ## Yol Haritası
 
@@ -156,7 +156,7 @@ text-to-speech/
 
 - Proje iskeleti
 - Global hotkey + audio capture
-- Groq + Alibaba Qwen entegrasyonu
+- Groq + Ollama/Gemma entegrasyonu
 - Text injection
 - Basit settings
 
@@ -185,7 +185,7 @@ text-to-speech/
 ## API Anahtarları (Henüz Yok — Edinilecek)
 
 - [ ] Groq API key — https://console.groq.com (ücretsiz başlangıç, ASR için)
-- [x] Alibaba DashScope API key — mevcut (LLM temizleme için)
+- [x] Yerel Ollama modeli — `gemma2:2b` mevcut (LLM temizleme için)
 - [ ] (Sonraki, opsiyonel) Anthropic API key — Claude Haiku A/B için
 - [ ] (Sonraki) Supabase project
 - [ ] (Sonraki) iyzico merchant

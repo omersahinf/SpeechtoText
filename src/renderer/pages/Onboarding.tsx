@@ -341,7 +341,7 @@ export default function Onboarding({ initialSettings, onComplete }: OnboardingPr
       <StepShell
         {...shellProps}
         title="API bağlantısını hazırla"
-        subtitle="MVP döneminde Groq ve DashScope anahtarları yerel ayarlarda saklanır. Production sürümünde bu anahtarlar backend'de yönetilecek."
+        subtitle="Groq anahtarı ses transkripsiyonu için gerekir. AI temizleme yerel Ollama/Gemma ile çalışır."
         hint="Son kullanıcı sürümünde bu ekran geliştirici modu dışında gösterilmeyecek."
       >
         <div className="grid h-full content-center gap-4">
@@ -374,37 +374,9 @@ export default function Onboarding({ initialSettings, onComplete }: OnboardingPr
             </p>
           </label>
 
-          <label className="grid gap-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-sd-text">DashScope API Key</span>
-              <a
-                href="https://dashscope.console.aliyun.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-sd-accent"
-              >
-                Anahtar al →
-              </a>
-            </div>
-            <input
-              type="password"
-              value={settings.dashscopeApiKey}
-              aria-label="DashScope API Key"
-              className="sd-input px-4"
-              autoComplete="off"
-              placeholder="sk-..."
-              onChange={(event) =>
-                setSettings((current) => ({ ...current, dashscopeApiKey: event.target.value }))
-              }
-            />
-            <p className="text-xs leading-5 text-sd-faint">
-              AI temizleme için kullanılır. Boş kalırsa dikte ham transkript olarak devam eder.
-            </p>
-          </label>
-
           <div className="rounded-sdMd border border-sd-border bg-sd-muted p-4 text-xs leading-5 text-sd-dim">
-            Production mimarisi farklı olacak: Electron uygulaması anahtar taşımaz; istekler DoDo
-            backend üzerinden Groq/DashScope'a gider.
+            Yerel temizleme için Ollama'nın çalışıyor olması gerekir. Bu makinede kullanılacak
+            model: {settings.ollamaModel}.
           </div>
         </div>
       </StepShell>

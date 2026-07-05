@@ -24,5 +24,6 @@ npm run dev
 
 ```bash
 GROQ_API_KEY=
-DASHSCOPE_API_KEY=
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=gemma2:2b
 ```

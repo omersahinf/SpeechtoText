@@ -6,7 +6,7 @@ import type {
   AppearanceMetaphor,
   AppearanceMode
 } from '@/shared/types'
-import { UI_LANGUAGES } from '@/shared/constants'
+import { OLLAMA_MODELS, UI_LANGUAGES } from '@/shared/constants'
 import { PALETTES } from '@/renderer/styles/tokens'
 
 interface GeneralTabProps {
@@ -17,7 +17,7 @@ interface GeneralTabProps {
 
 const SECTION_COPY = {
   all: ['Genel', 'API, davranış ve görünüm ayarları'],
-  api: ['API Anahtarları', 'Transkripsiyon ve AI temizleme sağlayıcı bağlantıları'],
+  api: ['API ve Yerel Model', 'Transkripsiyon ve yerel AI temizleme bağlantıları'],
   appearance: ['Görünüm', 'Overlay ve ayarlar penceresinin ortak tasarım değişkenleri'],
   behavior: ['Davranış', 'Dikte akışının uygulama genelindeki çalışma şekli']
 } satisfies Record<NonNullable<GeneralTabProps['section']>, [string, string]>
@@ -66,38 +66,31 @@ export function GeneralTab({ settings, onChange, section = 'all' }: GeneralTabPr
             />
           </label>
 
-          <label className="grid gap-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-sd-text">DashScope API Key</span>
-              <a
-                href="https://dashscope.console.aliyun.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-sd-accent transition hover:opacity-100"
-                style={{ opacity: 0.7 }}
-              >
-                Anahtar al →
-              </a>
-            </div>
-            <input
-              type="password"
-              value={settings.dashscopeApiKey}
-              aria-label="DashScope API Key"
-              className="sd-input px-4"
-              autoComplete="off"
-              onChange={(e) => onChange({ dashscopeApiKey: e.target.value })}
-            />
-          </label>
-
           <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
             <label className="grid gap-2 text-sm">
-              <span className="font-medium text-sd-text">DashScope Base URL</span>
+              <span className="font-medium text-sd-text">Ollama Base URL</span>
               <input
-                value={settings.dashscopeBaseUrl}
-                aria-label="DashScope Base URL"
+                value={settings.ollamaBaseUrl}
+                aria-label="Ollama Base URL"
                 className="sd-input px-4"
-                onChange={(e) => onChange({ dashscopeBaseUrl: e.target.value })}
+                onChange={(e) => onChange({ ollamaBaseUrl: e.target.value })}
               />
+            </label>
+
+            <label className="grid gap-2 text-sm">
+              <span className="font-medium text-sd-text">Yerel temizleme modeli</span>
+              <select
+                value={settings.ollamaModel}
+                aria-label="Yerel temizleme modeli"
+                className="sd-input px-3"
+                onChange={(e) => onChange({ ollamaModel: e.target.value })}
+              >
+                {OLLAMA_MODELS.map((model) => (
+                  <option key={model.value} value={model.value}>
+                    {model.label}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="grid gap-2 text-sm">

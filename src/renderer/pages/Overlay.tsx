@@ -37,7 +37,7 @@ export default function Overlay(): ReactElement {
   const [pillMessage, setPillMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('Hata')
   const [autoApply, setAutoApply] = useState(true)
-  const [transformMode, setTransformMode] = useState<TransformMode>('polish')
+  const [transformMode, setTransformMode] = useState<TransformMode>('raw')
   const [metaphor, setMetaphor] = useState<AppearanceMetaphor>('wave')
   const [hotkeyKeyCode, setHotkeyKeyCode] = useState(3640)
   const hotkeyLabel = getHotkeyShortLabel(hotkeyKeyCode)

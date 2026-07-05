@@ -17,9 +17,8 @@ export interface Translations {
       subtitle: string
       groqApiKey: string
       groqApiKeyGet: string
-      dashscopeApiKey: string
-      dashscopeApiKeyGet: string
-      dashscopeBaseUrl: string
+      ollamaBaseUrl: string
+      ollamaModel: string
       clipboardMethod: string
       overlayEnabled: string
       overlayEnabledDesc: string

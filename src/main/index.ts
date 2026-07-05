@@ -200,9 +200,11 @@ function registerSettingsIpc(): void {
         const settings = settingsStore?.getSettings()
         const result = await cleanTranscript(payload.text, {
           mode: 'standard',
+          languageMode: settings?.dictationLanguageMode,
           temperature: 0.3,
           customPrompt: `Kullanıcı talimatı: "${payload.instruction}". Bu talimatı uygula.`,
-          vocabPreset: settings?.vocabPreset
+          vocabPreset: settings?.vocabPreset,
+          allowRewrite: true
         })
         return { ok: !result.fallback, text: result.text }
       } catch (error) {
@@ -302,6 +304,7 @@ function registerSettingsIpc(): void {
     try {
       const result = await cleanTranscript(sample, {
         mode,
+        languageMode: settingsStore?.getSettings().dictationLanguageMode,
         temperature: settingsStore?.getSettings().llmTemperature
       })
       return {
@@ -309,6 +312,7 @@ function registerSettingsIpc(): void {
         input: sample,
         output: result.text,
         latencyMs: result.latencyMs,
+        model: result.model,
         fallback: Boolean(result.fallback)
       }
     } catch (error) {

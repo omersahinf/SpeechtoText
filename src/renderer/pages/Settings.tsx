@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactElement } from 'react'
-import type { AppSettings, CustomVocabEntry } from '@/shared/types'
+import type { AppSettings, CustomVocabEntry, DictationLanguageMode } from '@/shared/types'
 import { useSettings } from '@/renderer/hooks/useSettings'
 import { applyAppearance, buildAppearanceTheme } from '@/renderer/styles/tokens'
 import { ApiKeysTab, AppearanceTab, BehaviorTab } from './settings/tabs/GeneralTab'
@@ -24,7 +24,7 @@ type SettingsTab =
   | 'about'
 
 const TABS: { id: SettingsTab; label: string; icon: string }[] = [
-  { id: 'api', label: 'API Anahtarları', icon: '🔑' },
+  { id: 'api', label: 'API ve Model', icon: '🔑' },
   { id: 'appearance', label: 'Görünüm', icon: '◐' },
   { id: 'behavior', label: 'Davranış', icon: '⚙' },
   { id: 'microphone', label: 'Mikrofon', icon: '🎙' },
@@ -91,7 +91,8 @@ function SettingsAiSection({
       <div>
         <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>AI Temizleme</div>
         <div style={{ fontSize: 13, color: m.textDim, marginTop: 6 }}>
-          Türkçe konuşmanı dolgu kelimelerden arındır, kod-switching'i koru.
+          Sadece Türkçe modunda hızlı fonetik yazım, Türkçe + İngilizce modunda yerel Gemma
+          temizliği.
         </div>
       </div>
 
@@ -196,14 +197,19 @@ function SettingsAiSection({
           },
           {
             label: 'Kod-switching koru',
-            desc: 'İngilizce kelimeler kapital kalır',
-            checked: settings.appContextEnabled,
-            patch: { appContextEnabled: !settings.appContextEnabled }
+            desc: 'Türkçe + İngilizce modu',
+            checked: settings.dictationLanguageMode === 'tr-en',
+            patch: {
+              dictationLanguageMode: settings.dictationLanguageMode === 'tr-en' ? 'tr' : 'tr-en'
+            } satisfies Partial<AppSettings>
           },
           {
-            label: 'Argo temizliği',
-            desc: 'Resmi yazışmalar için',
-            checked: settings.transformMode === 'polish',
+            label: 'Yerel Gemma temizliği',
+            desc:
+              settings.dictationLanguageMode === 'tr'
+                ? 'Sadece Türkçe modunda Gemma kullanılmaz'
+                : 'Türkçe + İngilizce modunda AI temizleme',
+            checked: settings.dictationLanguageMode !== 'tr' && settings.transformMode !== 'raw',
             patch: {
               transformMode: settings.transformMode === 'polish' ? 'raw' : 'polish'
             } satisfies Partial<AppSettings>
@@ -229,6 +235,43 @@ function SettingsAiSection({
             <Toggle checked={row.checked} />
           </button>
         ))}
+      </div>
+
+      <div
+        style={{
+          borderRadius: theme.radius.lg,
+          border: `1px solid ${m.border}`,
+          background: m.surface2,
+          padding: 16
+        }}
+      >
+        <label style={{ display: 'grid', gap: 8 }}>
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: m.text }}>Dikte dili</span>
+          <select
+            value={settings.dictationLanguageMode}
+            aria-label="Dikte dili"
+            style={{
+              height: 40,
+              borderRadius: theme.radius.md,
+              border: `1px solid ${m.border}`,
+              background: m.surfaceSolid,
+              color: m.text,
+              padding: '0 12px',
+              outline: 'none'
+            }}
+            onChange={(event) =>
+              onChange({ dictationLanguageMode: event.target.value as DictationLanguageMode })
+            }
+          >
+            <option value="tr-en">Türkçe + İngilizce</option>
+            <option value="tr">Sadece Türkçe</option>
+          </select>
+          <span style={{ fontSize: 11.5, color: m.textDim, lineHeight: 1.45 }}>
+            Sadece Türkçe modunda Whisper Türkçe'ye zorlanır, Gemma kullanılmaz ve fonetik Türkçe
+            yazım lokal uygulanır. Türkçe + İngilizce modunda dil otomatik algılanır ve Gemma
+            kod-switching'i korur.
+          </span>
+        </label>
       </div>
 
       <div

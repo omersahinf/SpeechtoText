@@ -61,7 +61,11 @@ function buildMatchVariants(term: string, replacement: string): string[] {
     if (ascii === 'cloud' || ascii === 'claude') {
       variants.add('cloud')
       variants.add('claude')
+      variants.add('klauda')
+      variants.add('klaude')
       variants.add('klaud')
+      variants.add('klauta')
+      variants.add('klaut')
       variants.add('klod')
     }
   }

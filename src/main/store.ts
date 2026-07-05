@@ -2,23 +2,29 @@ import ElectronStoreImport from 'electron-store'
 import type ElectronStoreDefault from 'electron-store'
 import { z } from 'zod'
 import type { AppSettings, AppSettingsUpdate } from '@/shared/types'
+import {
+  DEFAULT_OLLAMA_BASE_URL,
+  DEFAULT_OLLAMA_MODEL,
+  LEGACY_DASHSCOPE_BASE_URL
+} from '@/shared/constants'
 import { encryptString, isEncryptionAvailable, tryDecryptString } from './secure-storage'
 import { logger } from './logger'
 
-const DEFAULT_DASHSCOPE_BASE_URL =
-  process.env.DASHSCOPE_BASE_URL ?? 'https://coding-intl.dashscope.aliyuncs.com/v1'
-const DEFAULT_DASHSCOPE_MODEL = process.env.DASHSCOPE_MODEL ?? 'qwen3.6-plus'
+const DEFAULT_STORED_OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_BASE_URL
+const DEFAULT_STORED_OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? DEFAULT_OLLAMA_MODEL
+const DEFAULT_DICTATION_LANGUAGE_MODE = 'tr-en'
 const DEFAULT_HOTKEY_KEY_CODE = 3640
 const DEFAULT_LLM_TEMPERATURE = 0.1
+const DEFAULT_TRANSFORM_MODE = 'raw'
 
-const CURRENT_SCHEMA_VERSION = 4
+const CURRENT_SCHEMA_VERSION = 9
 
 const storedSettingsSchema = z.object({
   schemaVersion: z.number().int().min(1).default(CURRENT_SCHEMA_VERSION),
   groqApiKeyEncrypted: z.string().default(''),
-  dashscopeApiKeyEncrypted: z.string().default(''),
-  dashscopeBaseUrl: z.string().url().default(DEFAULT_DASHSCOPE_BASE_URL),
-  dashscopeModel: z.string().min(1).default(DEFAULT_DASHSCOPE_MODEL),
+  ollamaBaseUrl: z.string().url().default(DEFAULT_STORED_OLLAMA_BASE_URL),
+  ollamaModel: z.string().min(1).default(DEFAULT_STORED_OLLAMA_MODEL),
+  dictationLanguageMode: z.enum(['tr', 'tr-en']).default(DEFAULT_DICTATION_LANGUAGE_MODE),
   hotkeyKeyCode: z.number().int().positive().default(DEFAULT_HOTKEY_KEY_CODE),
   hotkeyMode: z.enum(['push-to-talk', 'toggle']).default('push-to-talk'),
   llmEnabled: z.boolean().default(true),
@@ -28,7 +34,7 @@ const storedSettingsSchema = z.object({
   useClipboardInjection: z.boolean().default(true),
   onboardingCompleted: z.boolean().default(false),
   autoApply: z.boolean().default(true),
-  transformMode: z.enum(['polish', 'raw']).default('polish'),
+  transformMode: z.enum(['polish', 'raw']).default(DEFAULT_TRANSFORM_MODE),
   overlayEnabled: z.boolean().default(true),
   customPrompt: z.string().default(''),
   vocabPreset: z.enum(['none', 'software', 'medical', 'legal']).default('none'),
@@ -70,6 +76,34 @@ const MIGRATIONS: Record<number, MigrationFn> = {
       raw.appearanceAccent === 'amber'
         ? 'indigo'
         : raw.appearanceAccent
+  }),
+  5: (raw) => ({
+    ...raw,
+    dashscopeModel: raw.dashscopeModel ?? DEFAULT_OLLAMA_MODEL
+  }),
+  6: (raw) => ({
+    ...raw,
+    dictationLanguageMode: raw.dictationLanguageMode ?? DEFAULT_DICTATION_LANGUAGE_MODE
+  }),
+  7: (raw) => ({
+    ...raw,
+    dashscopeBaseUrl:
+      raw.dashscopeBaseUrl === undefined || raw.dashscopeBaseUrl === LEGACY_DASHSCOPE_BASE_URL
+        ? DEFAULT_OLLAMA_BASE_URL
+        : raw.dashscopeBaseUrl
+  }),
+  8: (raw) => ({
+    ...raw,
+    ollamaBaseUrl:
+      typeof raw.ollamaBaseUrl === 'string' ? raw.ollamaBaseUrl : DEFAULT_STORED_OLLAMA_BASE_URL,
+    ollamaModel:
+      typeof raw.ollamaModel === 'string' && raw.ollamaModel.startsWith('gemma')
+        ? raw.ollamaModel
+        : DEFAULT_STORED_OLLAMA_MODEL
+  }),
+  9: (raw) => ({
+    ...raw,
+    transformMode: DEFAULT_TRANSFORM_MODE
   })
 }
 
@@ -97,10 +131,9 @@ function normalizeStoredSettings(value: unknown): StoredSettings {
 function toPublicSettings(stored: StoredSettings): AppSettings {
   return {
     groqApiKey: tryDecryptString(stored.groqApiKeyEncrypted) || process.env.GROQ_API_KEY || '',
-    dashscopeApiKey:
-      tryDecryptString(stored.dashscopeApiKeyEncrypted) || process.env.DASHSCOPE_API_KEY || '',
-    dashscopeBaseUrl: stored.dashscopeBaseUrl,
-    dashscopeModel: stored.dashscopeModel,
+    ollamaBaseUrl: stored.ollamaBaseUrl,
+    ollamaModel: stored.ollamaModel,
+    dictationLanguageMode: stored.dictationLanguageMode,
     hotkeyKeyCode: stored.hotkeyKeyCode,
     hotkeyMode: stored.hotkeyMode,
     llmEnabled: stored.llmEnabled,
@@ -133,18 +166,16 @@ function toStoredUpdate(settings: AppSettingsUpdate): Partial<StoredSettings> {
     update.groqApiKeyEncrypted = settings.groqApiKey ? encryptString(settings.groqApiKey) : ''
   }
 
-  if (settings.dashscopeApiKey !== undefined) {
-    update.dashscopeApiKeyEncrypted = settings.dashscopeApiKey
-      ? encryptString(settings.dashscopeApiKey)
-      : ''
+  if (settings.ollamaBaseUrl !== undefined) {
+    update.ollamaBaseUrl = settings.ollamaBaseUrl
   }
 
-  if (settings.dashscopeBaseUrl !== undefined) {
-    update.dashscopeBaseUrl = settings.dashscopeBaseUrl
+  if (settings.ollamaModel !== undefined) {
+    update.ollamaModel = settings.ollamaModel
   }
 
-  if (settings.dashscopeModel !== undefined) {
-    update.dashscopeModel = settings.dashscopeModel
+  if (settings.dictationLanguageMode !== undefined) {
+    update.dictationLanguageMode = settings.dictationLanguageMode
   }
 
   if (settings.hotkeyKeyCode !== undefined) {
@@ -267,15 +298,8 @@ export function createSettingsStore(): SettingsStore {
       delete process.env.GROQ_API_KEY
     }
 
-    const dashscopeDecrypted = tryDecryptString(stored.dashscopeApiKeyEncrypted)
-    if (dashscopeDecrypted) {
-      process.env.DASHSCOPE_API_KEY = dashscopeDecrypted
-    } else if (stored.dashscopeApiKeyEncrypted === '') {
-      delete process.env.DASHSCOPE_API_KEY
-    }
-
-    process.env.DASHSCOPE_BASE_URL = stored.dashscopeBaseUrl
-    process.env.DASHSCOPE_MODEL = stored.dashscopeModel
+    process.env.OLLAMA_BASE_URL = stored.ollamaBaseUrl
+    process.env.OLLAMA_MODEL = stored.ollamaModel
   }
 
   if (!isEncryptionAvailable()) {

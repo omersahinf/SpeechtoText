@@ -1,5 +1,7 @@
 export type LlmMode = 'conservative' | 'standard'
 
+export type DictationLanguageMode = 'tr' | 'tr-en'
+
 export type HotkeyMode = 'push-to-talk' | 'toggle'
 
 export type TransformMode = 'polish' | 'raw'
@@ -66,9 +68,9 @@ export type UiLanguage = 'tr' | 'en'
 
 export interface AppSettings {
   groqApiKey: string
-  dashscopeApiKey: string
-  dashscopeBaseUrl: string
-  dashscopeModel: string
+  ollamaBaseUrl: string
+  ollamaModel: string
+  dictationLanguageMode: DictationLanguageMode
   hotkeyKeyCode: number
   hotkeyMode: HotkeyMode
   llmEnabled: boolean
@@ -182,6 +184,7 @@ export interface LlmTestResult {
   input: string
   output: string
   latencyMs: number
+  model?: string
   fallback?: boolean
   error?: string
 }

@@ -5,13 +5,20 @@ import type { CleanTranscriptResult } from './llm'
 import type { HotkeyManager } from './hotkey'
 import type { RecorderBridge } from './recorder-bridge'
 import type { AppTray } from './tray'
-import type { AppSettings, DictationEntry, LlmMode, VocabPreset } from '@/shared/types'
+import type {
+  AppSettings,
+  DictationEntry,
+  DictationLanguageMode,
+  LlmMode,
+  VocabPreset
+} from '@/shared/types'
 import {
   analyzePcm16Wav,
   isLikelySilenceHallucination,
   isVoiceCancelCommand,
   shouldSkipTranscriptionForAudio
 } from './audio-analysis'
+import { applyTurkishPhoneticWriting } from './util/tr-phonetic'
 import { logger } from './logger'
 import { notifyError, notifyWarn } from './notifier'
 import type { OverlayWindowController } from './overlay-window'
@@ -20,13 +27,17 @@ interface PipelineDeps {
   hotkey: HotkeyManager
   recorder: RecorderBridge
   asr: {
-    transcribe: (audioBuffer: Buffer) => Promise<TranscriptionResult>
+    transcribe: (
+      audioBuffer: Buffer,
+      options?: { language?: string | null }
+    ) => Promise<TranscriptionResult>
   }
   llm: {
     cleanTranscript: (
       rawText: string,
       options?: {
         mode?: LlmMode
+        languageMode?: DictationLanguageMode
         temperature?: number
         customPrompt?: string
         vocabPreset?: VocabPreset
@@ -289,7 +300,8 @@ export function createPipeline(deps: PipelineDeps): Pipeline {
         }
 
         try {
-          const asrResult = await deps.asr.transcribe(audioBuffer)
+          const asrLanguage = settings.dictationLanguageMode === 'tr-en' ? null : 'tr'
+          const asrResult = await deps.asr.transcribe(audioBuffer, { language: asrLanguage })
           rawText = asrResult.text
           asrMs = asrResult.latencyMs
         } catch (error) {
@@ -327,39 +339,35 @@ export function createPipeline(deps: PipelineDeps): Pipeline {
           .filter(Boolean)
           .join('\n')
 
-        const shouldRunLlm = settings.transformMode !== 'raw' && settings.llmEnabled
+        const shouldRunLlm =
+          settings.dictationLanguageMode !== 'tr' &&
+          settings.transformMode !== 'raw' &&
+          settings.llmEnabled
         const llmResult = !shouldRunLlm
           ? { text: rawText, latencyMs: 0 }
-          : !settings.dashscopeApiKey
-            ? { text: rawText, latencyMs: 0, fallback: true }
-            : await deps.llm.cleanTranscript(rawText, {
-                mode: settings.llmMode,
-                temperature: settings.llmTemperature,
-                customPrompt: combinedCustomPrompt,
-                vocabPreset: settings.vocabPreset,
-                appContext: activeApp,
-                useCache: settings.llmCacheEnabled !== false
-              })
+          : await deps.llm.cleanTranscript(rawText, {
+              mode: settings.llmMode,
+              languageMode: settings.dictationLanguageMode,
+              temperature: settings.llmTemperature,
+              customPrompt: combinedCustomPrompt,
+              vocabPreset: settings.vocabPreset,
+              appContext: activeApp,
+              useCache: settings.llmCacheEnabled !== false
+            })
 
-        if (shouldRunLlm && !settings.dashscopeApiKey) {
-          notifyWarn(
-            'AI anahtarı eksik',
-            'DashScope API anahtarı olmadığı için ham metin kullanıldı.'
-          )
+        if ('fallback' in llmResult && llmResult.fallback) {
+          notifyWarn('Metin temizleme başarısız', 'Ham metin yapıştırıldı.')
           deps.overlay?.showMessage('AI temizleme atlandı')
         }
 
-        if ('fallback' in llmResult && llmResult.fallback) {
-          if (settings.dashscopeApiKey) {
-            notifyWarn('Metin temizleme başarısız', 'Ham metin yapıştırıldı.')
-            deps.overlay?.showMessage('AI temizleme atlandı')
-          }
-        }
-
         // Snippet genişletme: pipeline'dan geçen metin snippet store'da replace edilir
+        const languageText =
+          settings.dictationLanguageMode === 'tr'
+            ? applyTurkishPhoneticWriting(llmResult.text)
+            : llmResult.text
         const vocabText = deps.customVocab
-          ? deps.customVocab.applyToText(llmResult.text)
-          : llmResult.text
+          ? deps.customVocab.applyToText(languageText)
+          : languageText
         const cleanText = deps.snippets ? deps.snippets.applySnippets(vocabText) : vocabText
         const injectStartedAt = Date.now()
 

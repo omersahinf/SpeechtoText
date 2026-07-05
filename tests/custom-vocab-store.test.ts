@@ -91,6 +91,10 @@ describe('createCustomVocabStore', () => {
 
       expect(store.applyToText('cloud ile yaz')).toBe('Claude ile yaz')
       expect(store.applyToText('klaud ile yaz')).toBe('Claude ile yaz')
+      expect(store.applyToText('Klauda ile yaz')).toBe('Claude ile yaz')
+      expect(store.applyToText('klaude ile yaz')).toBe('Claude ile yaz')
+      expect(store.applyToText('Klauta ile yaz')).toBe('Claude ile yaz')
+      expect(store.applyToText('Klaut ile yaz')).toBe('Claude ile yaz')
       expect(store.applyToText("klod'a sor")).toBe("Claude'a sor")
     })
 

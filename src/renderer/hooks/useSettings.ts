@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { AppSettings } from '@/shared/types'
+import { DEFAULT_OLLAMA_BASE_URL, DEFAULT_OLLAMA_MODEL } from '@/shared/constants'
 
 const EMPTY_SETTINGS: AppSettings = {
   groqApiKey: '',
-  dashscopeApiKey: '',
-  dashscopeBaseUrl: 'https://coding-intl.dashscope.aliyuncs.com/v1',
-  dashscopeModel: 'qwen3.6-plus',
+  ollamaBaseUrl: DEFAULT_OLLAMA_BASE_URL,
+  ollamaModel: DEFAULT_OLLAMA_MODEL,
+  dictationLanguageMode: 'tr-en',
   hotkeyKeyCode: 3640,
   hotkeyMode: 'push-to-talk',
   llmEnabled: true,
@@ -15,7 +16,7 @@ const EMPTY_SETTINGS: AppSettings = {
   useClipboardInjection: true,
   onboardingCompleted: false,
   autoApply: true,
-  transformMode: 'polish',
+  transformMode: 'raw',
   overlayEnabled: true,
   customPrompt: '',
   vocabPreset: 'none',

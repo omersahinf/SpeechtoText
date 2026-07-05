@@ -30,7 +30,8 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockSafeStorage.isEncryptionAvailable.mockReturnValue(true)
   delete process.env.GROQ_API_KEY
-  delete process.env.DASHSCOPE_API_KEY
+  delete process.env.OLLAMA_BASE_URL
+  delete process.env.OLLAMA_MODEL
 })
 
 describe('settings store', () => {
@@ -41,7 +42,7 @@ describe('settings store', () => {
 
     expect(s.hotkeyMode).toBe('push-to-talk')
     expect(s.llmEnabled).toBe(true)
-    expect(s.transformMode).toBe('polish')
+    expect(s.transformMode).toBe('raw')
     expect(s.groqApiKey).toBe('')
   })
 
@@ -84,14 +85,19 @@ describe('settings store', () => {
     expect(s.groqApiKey).toBe('')
   })
 
-  it('applyToProcessEnv writes keys to env', async () => {
+  it('applyToProcessEnv writes keys and Ollama settings to env', async () => {
     const { createSettingsStore } = await import('../src/main/store')
     const store = createSettingsStore()
 
-    store.updateSettings({ groqApiKey: 'gk', dashscopeApiKey: 'dk' })
+    store.updateSettings({
+      groqApiKey: 'gk',
+      ollamaBaseUrl: 'http://127.0.0.1:11434',
+      ollamaModel: 'gemma2:2b'
+    })
     store.applyToProcessEnv()
 
     expect(process.env.GROQ_API_KEY).toBe('gk')
-    expect(process.env.DASHSCOPE_API_KEY).toBe('dk')
+    expect(process.env.OLLAMA_BASE_URL).toBe('http://127.0.0.1:11434')
+    expect(process.env.OLLAMA_MODEL).toBe('gemma2:2b')
   })
 })

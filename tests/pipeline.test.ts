@@ -73,9 +73,9 @@ function silentWavBuffer(): Buffer {
 
 const baseSettings: AppSettings = {
   groqApiKey: 'gk',
-  dashscopeApiKey: 'dk',
-  dashscopeBaseUrl: 'https://example',
-  dashscopeModel: 'qwen',
+  ollamaBaseUrl: 'http://127.0.0.1:11434',
+  ollamaModel: 'gemma2:2b',
+  dictationLanguageMode: 'tr-en',
   hotkeyKeyCode: 3640,
   hotkeyMode: 'push-to-talk',
   llmEnabled: true,
@@ -245,18 +245,22 @@ describe('pipeline', () => {
     expect(overlay.sendState).toHaveBeenCalledWith('error', { message: 'Çevrimdışı' })
   })
 
-  it('skips LLM with a warning when DashScope key is missing', async () => {
-    const { deps, hotkey, llm, injector, overlay } = makeDeps({
-      settings: { dashscopeApiKey: '' }
+  it('skips LLM and applies local phonetic writing in Turkish-only mode', async () => {
+    const asr = {
+      transcribe: vi.fn().mockResolvedValue({ text: 'Deadline Writing Deadline', latencyMs: 10 })
+    }
+    const { deps, hotkey, llm, injector } = makeDeps({
+      asr,
+      settings: { dictationLanguageMode: 'tr', transformMode: 'polish', llmEnabled: true }
     })
     const pipeline = createPipeline(deps)
 
     await transitionToProcessing(pipeline, hotkey)
     await pipeline.handleAudioBuffer(makeWavBuffer())
 
+    expect(asr.transcribe).toHaveBeenCalledWith(expect.any(Buffer), { language: 'tr' })
     expect(llm.cleanTranscript).not.toHaveBeenCalled()
-    expect(injector.injectText).toHaveBeenCalledWith('merhaba')
-    expect(overlay.showMessage).toHaveBeenCalledWith('AI temizleme atlandı')
+    expect(injector.injectText).toHaveBeenCalledWith('dedlayn rayting dedlayn')
   })
 
   it('applies custom vocab after LLM cleanup', async () => {

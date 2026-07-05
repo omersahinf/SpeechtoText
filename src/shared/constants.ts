@@ -1,13 +1,9 @@
-export const DASHSCOPE_MODELS = [
-  { value: 'qwen3.6-plus', label: 'Qwen 3.6 Plus (önerilen)' },
-  { value: 'qwen3.5-plus', label: 'Qwen 3.5 Plus' },
-  { value: 'qwen-plus', label: 'Qwen Plus' },
-  { value: 'qwen-turbo', label: 'Qwen Turbo (hızlı)' },
-  { value: 'qwen-max', label: 'Qwen Max (güçlü)' }
-] as const
+export const OLLAMA_MODELS = [{ value: 'gemma2:2b', label: 'Gemma 2 2B (yerel)' }] as const
 
-export const DEFAULT_DASHSCOPE_MODEL = 'qwen3.6-plus'
-export const DEFAULT_DASHSCOPE_BASE_URL = 'https://coding-intl.dashscope.aliyuncs.com/v1'
+export const DEFAULT_OLLAMA_MODEL = 'gemma2:2b'
+export const DEFAULT_OLLAMA_FALLBACK_MODELS = OLLAMA_MODELS.map((model) => model.value)
+export const DEFAULT_OLLAMA_BASE_URL = 'http://127.0.0.1:11434'
+export const LEGACY_DASHSCOPE_BASE_URL = 'https://coding-intl.dashscope.aliyuncs.com/v1'
 export const DEFAULT_HOTKEY_KEY_CODE = 3640
 export const DEFAULT_LLM_TEMPERATURE = 0.1
 

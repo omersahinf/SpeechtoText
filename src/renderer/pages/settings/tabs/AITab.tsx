@@ -1,5 +1,11 @@
 import { useState, useEffect, type ReactElement } from 'react'
-import type { AppSettings, LlmMode, VocabPreset, CustomVocabEntry } from '@/shared/types'
+import type {
+  AppSettings,
+  CustomVocabEntry,
+  DictationLanguageMode,
+  LlmMode,
+  VocabPreset
+} from '@/shared/types'
 import { rendererLogger } from '@/renderer/lib/logger'
 
 interface AITabProps {
@@ -37,7 +43,7 @@ export function AITab({ settings, onChange }: AITabProps): ReactElement {
         )
       } else {
         setTestResult(
-          `✓ Başarılı (${result.latencyMs}ms). Giriş: "${result.input}" → Çıkış: "${result.output}"`
+          `✓ Başarılı (${result.model ?? 'model bilinmiyor'}, ${result.latencyMs}ms). Giriş: "${result.input}" → Çıkış: "${result.output}"`
         )
       }
     } catch (error: unknown) {
@@ -164,6 +170,26 @@ export function AITab({ settings, onChange }: AITabProps): ReactElement {
         </label>
 
         <div className="grid gap-4">
+          <label className="grid gap-2 text-sm">
+            <span className="font-medium text-sd-text">Dikte dili</span>
+            <select
+              value={settings.dictationLanguageMode}
+              disabled={!settings.llmEnabled}
+              aria-label="Dikte dili"
+              className="sd-input px-3 disabled:opacity-40"
+              onChange={(e) =>
+                onChange({ dictationLanguageMode: e.target.value as DictationLanguageMode })
+              }
+            >
+              <option value="tr-en">Türkçe + İngilizce</option>
+              <option value="tr">Sadece Türkçe</option>
+            </select>
+            <p className="text-xs text-sd-faint">
+              Türkçe modunda ASR Türkçe'ye zorlanır; Türkçe + İngilizce modunda dil otomatik
+              algılanır.
+            </p>
+          </label>
+
           <label className="grid gap-2 text-sm">
             <span className="font-medium text-sd-text">Temizleme modu</span>
             <select

@@ -2,7 +2,7 @@ import Groq, { toFile, type Uploadable } from 'groq-sdk'
 import { withRetry, withTimeout } from './util/retry'
 
 export interface TranscribeOptions {
-  language?: string
+  language?: string | null
 }
 
 export interface TranscriptionResult {
@@ -31,12 +31,12 @@ function getGroqClient(): Groq {
 async function transcribeOnce(
   client: Groq,
   audioFile: Uploadable,
-  language: string
+  language: string | null
 ): Promise<string> {
   const result = await client.audio.transcriptions.create({
     file: audioFile,
     model: process.env.GROQ_ASR_MODEL ?? DEFAULT_MODEL,
-    language
+    ...(language ? { language } : {})
   })
 
   return result.text.trim()
@@ -47,7 +47,7 @@ export async function transcribe(
   options: TranscribeOptions = {}
 ): Promise<TranscriptionResult> {
   const startedAt = Date.now()
-  const language = options.language ?? DEFAULT_LANGUAGE
+  const language = options.language === undefined ? DEFAULT_LANGUAGE : options.language
   const client = getGroqClient()
   const audioFile = await toFile(audioBuffer, 'audio.wav', { type: 'audio/wav' })
 
